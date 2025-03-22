@@ -18,8 +18,11 @@ def parse_file(
     break_func=None,
 ):
     variables = {}
+    # TODO: make this into a function maybe and make it better
     if obj is not None:
         path_to_object_dir = find_directory(objects_parent_dir, obj)[0]
+    elif path_to_object_dir is None and obj is None:
+        raise ValueError("Must provide either an object number or a path.")
     if separator is None:
         separator = ":" if ".log" in filename else "="
     filename = os.path.join(path_to_object_dir, filename)
@@ -128,9 +131,10 @@ def load_2d_data(
     obj=None,
     path_to_object_dir=None,
     ts=None,
-    output_dir="output",
+    ds=None,
     time_ns=None,
     time_index=None,
+    output_dir="output",
 ):
     if ts is None:
         ts = load_time_series(
@@ -142,7 +146,7 @@ def load_2d_data(
         ds = ts.get_by_time((time_ns * 1e-9, "s"))
     elif time_index is not None:
         ds = ts[time_index]
-    else:
+    elif ds is None:
         raise ValueError("Must provide a time.")
     
     variables = parse_params_file(

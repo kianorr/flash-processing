@@ -489,14 +489,14 @@ def E_dens(data, data_yt, **kwargs):
 
 
 def compute(
-    names, obj, time_ns=None, time_ind=None, data_yt=None, ts=None, data=None, **kwargs
+    names, obj, time_ns=None, time_ind=None, data_yt=None, ts=None, ds=None, data=None, **kwargs
 ):
     # TODO: add ability to pass in time_ns as a list
     # especially since all times are loaded in load_2d_data anyway
     if ts is None:
         ts = load_time_series(obj)
-    if data_yt is None:
-        data_yt, __ = load_2d_data(obj, time_ns=time_ns, time_index=time_ind, ts=ts)
+    if data_yt is None or ds is None:
+        data_yt, ds = load_2d_data(obj, time_ns=time_ns, time_index=time_ind, ts=ts)
     if data is None:
         data = {}
     if isinstance(names, str):
@@ -513,17 +513,14 @@ def compute(
                 data_yt=data_yt,
                 data=data,
                 ts=ts,
+                ds=ds,
                 **kwargs
             )
 
         # TODO: just turn data_index into data? or keep data_index and data separate?
         data_index[name].update(
             object_id=obj,
-            time_ns=(
-                time_ns
-                if time_ns is not None
-                else ts[time_ind].current_time.value * 1e9
-            ),
+            time_ns=ds.current_time.value * 1e9
         )
         # data[name] = data_index[name].copy()
         # data[name]["data"] = data_index[name]["fun"](data, data_yt, **kwargs)
