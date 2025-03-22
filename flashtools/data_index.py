@@ -525,7 +525,7 @@ def compute(
                 **kwargs
             )
 
-        # TODO: just turn data_index into data? or keep data_index and data separate?
+        # TODO: don't include these in data_index
         data_index[name].update(object_id=obj, time_ns=ds.current_time.value * 1e9)
         # data[name] = data_index[name].copy()
         # data[name]["data"] = data_index[name]["fun"](data, data_yt, **kwargs)

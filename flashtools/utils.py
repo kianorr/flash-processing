@@ -7,29 +7,26 @@ import yt
 yt.set_log_level(50)
 
 
+# TODO: global bad bad bad
 def set_objects_parent_dir(new_dir):
-    global objects_parent_dir
-    objects_parent_dir = new_dir
-    if not os.path.exists(objects_parent_dir):
+    global object_parent_dir
+    object_parent_dir = new_dir
+    if not os.path.exists(object_parent_dir):
         raise ValueError("Directory does not exist.")
 
 
 def parse_file(
     obj=None,
-    path_to_object_dir=None,
+    object_dir=None,
     filename="flash.par",
     separator=None,
     break_func=None,
 ):
     variables = {}
-    # TODO: make this into a function maybe and make it better
-    if obj is not None:
-        path_to_object_dir = find_directory(objects_parent_dir, obj)[0]
-    elif path_to_object_dir is None and obj is None:
-        raise ValueError("Must provide either an object number or a path to object.")
+    object_dir = find_path_to_object((object_parent_dir, obj), object_dir)
     if separator is None:
         separator = ":" if ".log" in filename else "="
-    filename = os.path.join(path_to_object_dir, filename)
+    filename = os.path.join(object_dir, filename)
     with open(filename, "r") as file:
         for line in file:
             # Remove comments and strip whitespace
@@ -54,15 +51,15 @@ def parse_file(
 
 
 def parse_log_file(
-    obj=None, path_to_object_dir=None, filename=None, separator=":", break_func=None
+    obj=None, object_dir=None, filename=None, separator=":", break_func=None
 ):
     if break_func is None:
         break_func = lambda x: "Number x zones" in x and "Number y zones" in x
     if filename is None:
-        filename = find_log_file(obj=obj, path_to_object_dir=path_to_object_dir)
+        filename = find_log_file(obj=obj, object_dir=object_dir)
     variables = parse_file(
         obj=obj,
-        path_to_object_dir=path_to_object_dir,
+        object_dir=object_dir,
         filename=filename,
         separator=separator,
         break_func=break_func,
@@ -72,14 +69,14 @@ def parse_log_file(
 
 def parse_params_file(
     obj=None,
-    path_to_object_dir=None,
+    object_dir=None,
     filename="flash.par",
     separator="=",
     break_func=None,
 ):
     variables = parse_file(
         obj=obj,
-        path_to_object_dir=path_to_object_dir,
+        object_dir=object_dir,
         filename=filename,
         separator=separator,
         break_func=break_func,
@@ -100,53 +97,64 @@ def find_directory(parent_directory, xxx):
     return directories
 
 
+def find_path_to_object(obj_parent_and_id:tuple=None, object_dir=None):
+    """
+    obj_dir_info: tuple of (parent_directory, object_number)
+    object_dir: path to object
+    """
+    if obj_parent_and_id is not None:
+        object_dir = find_directory(*obj_parent_and_id)[0]
+    if object_dir is None:
+        raise ValueError("Must provide either an object number or a path to object.")
+    return object_dir
+
+
 def convert_to_eV(temp_C):
     temp_kelvin = temp_C + 273.15
     temp_eV = temp_kelvin * 8.617e-5
     return temp_eV
 
 
-def find_log_file(obj=None, path_to_object_dir=None):
+def find_log_file(obj=None, object_dir=None):
     # TODO: generalize to par file?
-    if obj is not None:
-        path_to_object_dir = find_directory(objects_parent_dir, obj)[0]
-    for path in os.listdir(path_to_object_dir):
+    object_dir = find_path_to_object((object_parent_dir, obj), object_dir)
+    for path in os.listdir(object_dir):
         if ".log" in path:
-            with open(os.path.join(path_to_object_dir, path), "r") as file:
+            with open(os.path.join(object_dir, path), "r") as file:
                 if list(file)[0].startswith(" FLASH log file:"):
                     return path
 
 
-def load_time_series(obj=None, path_to_object_dir=None, output_dir="output"):
-    if obj is not None:
-        path_to_object_dir = find_directory(objects_parent_dir, obj)[0]
+def load_time_series(obj=None, object_dir=None, output_dir="output"):
+    object_dir = find_path_to_object((object_parent_dir, obj), object_dir)
     variables = parse_params_file(
-        obj=obj, path_to_object_dir=path_to_object_dir, filename="flash.par"
+        object_dir=object_dir, filename="flash.par"
     )
     try:
         hdf5_files = os.path.join(output_dir, variables["basenm"] + "hdf5_plt_cnt_*")
-        ts = yt.load(os.path.join(path_to_object_dir, hdf5_files))
+        ts = yt.load(os.path.join(object_dir, hdf5_files))
     except:
         hdf5_files = os.path.join(output_dir, variables["basenm"] + "hdf5_chk_*")
-        ts = yt.load(os.path.join(path_to_object_dir, hdf5_files))
+        ts = yt.load(os.path.join(object_dir, hdf5_files))
     return ts
 
 
 def load_2d_data(
     obj=None,
-    path_to_object_dir=None,
+    object_dir=None,
     ts=None,
     ds=None,
     time_ns=None,
     time_index=None,
     output_dir="output",
 ):
+    object_dir = find_path_to_object((object_parent_dir, obj), object_dir)
     if ts is None:
         ts = load_time_series(
-            obj=obj, path_to_object_dir=path_to_object_dir, output_dir=output_dir
+            object_dir=object_dir, output_dir=output_dir
         )
-    if obj is not None:
-        path_to_object_dir = find_directory(objects_parent_dir, obj)[0]
+    # if obj is not None:
+    #     object_dir = find_directory(object_parent_dir, obj)[0]
     if time_ns is not None:
         ds = ts.get_by_time((time_ns * 1e-9, "s"))
     elif time_index is not None:
@@ -155,11 +163,11 @@ def load_2d_data(
         raise ValueError("Must provide a time.")
 
     variables = parse_params_file(
-        obj=obj, path_to_object_dir=path_to_object_dir, filename="flash.par"
+        object_dir=object_dir, filename="flash.par"
     )
-    log_variables = parse_log_file(obj=obj, path_to_object_dir=path_to_object_dir)
+    log_variables = parse_log_file(object_dir=object_dir)
     # hdf5_files = os.path.join(output_dir, variables["basenm"] + "hdf5_chk_*")
-    # ts = yt.load(os.path.join(path_to_object_dir, hdf5_files))
+    # ts = yt.load(os.path.join(object_dir, hdf5_files))
 
     nbx = log_variables["Number x zones"]
     nby = log_variables["Number y zones"]
