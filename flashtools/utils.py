@@ -7,8 +7,12 @@ import yt
 yt.set_log_level(50)
 
 
-# objects_parent_dir = os.path.abspath("objects")
-objects_parent_dir = "/Users/johan/Documents/research/flash_analysis/objects"
+def set_objects_parent_dir(new_dir):
+    global objects_parent_dir
+    objects_parent_dir = new_dir
+    if not os.path.exists(objects_parent_dir):
+        raise ValueError("Directory does not exist.")
+
 
 def parse_file(
     obj=None,
@@ -22,7 +26,7 @@ def parse_file(
     if obj is not None:
         path_to_object_dir = find_directory(objects_parent_dir, obj)[0]
     elif path_to_object_dir is None and obj is None:
-        raise ValueError("Must provide either an object number or a path.")
+        raise ValueError("Must provide either an object number or a path to object.")
     if separator is None:
         separator = ":" if ".log" in filename else "="
     filename = os.path.join(path_to_object_dir, filename)
@@ -121,9 +125,10 @@ def load_time_series(obj=None, path_to_object_dir=None, output_dir="output"):
     )
     try:
         hdf5_files = os.path.join(output_dir, variables["basenm"] + "hdf5_plt_cnt_*")
+        ts = yt.load(os.path.join(path_to_object_dir, hdf5_files))
     except:
         hdf5_files = os.path.join(output_dir, variables["basenm"] + "hdf5_chk_*")
-    ts = yt.load(os.path.join(path_to_object_dir, hdf5_files))
+        ts = yt.load(os.path.join(path_to_object_dir, hdf5_files))
     return ts
 
 
@@ -148,7 +153,7 @@ def load_2d_data(
         ds = ts[time_index]
     elif ds is None:
         raise ValueError("Must provide a time.")
-    
+
     variables = parse_params_file(
         obj=obj, path_to_object_dir=path_to_object_dir, filename="flash.par"
     )

@@ -489,7 +489,15 @@ def E_dens(data, data_yt, **kwargs):
 
 
 def compute(
-    names, obj, time_ns=None, time_ind=None, data_yt=None, ts=None, ds=None, data=None, **kwargs
+    names,
+    obj,
+    time_ns=None,
+    time_ind=None,
+    data_yt=None,
+    ts=None,
+    ds=None,
+    data=None,
+    **kwargs
 ):
     # TODO: add ability to pass in time_ns as a list
     # especially since all times are loaded in load_2d_data anyway
@@ -518,10 +526,7 @@ def compute(
             )
 
         # TODO: just turn data_index into data? or keep data_index and data separate?
-        data_index[name].update(
-            object_id=obj,
-            time_ns=ds.current_time.value * 1e9
-        )
+        data_index[name].update(object_id=obj, time_ns=ds.current_time.value * 1e9)
         # data[name] = data_index[name].copy()
         # data[name]["data"] = data_index[name]["fun"](data, data_yt, **kwargs)
         data = data_index[name]["fun"](data, data_yt, **kwargs)

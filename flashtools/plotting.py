@@ -119,7 +119,6 @@ def plot_2d(
     #     z = np.unique(data["z"]["data"][:, :, 0]) - target_height
     #     z_range = np.max(z) - np.min(z)
     #     z += z_offset
-        
 
     data_2d = data[name]["data"][:, :, 0]
     if conversion is not None:
