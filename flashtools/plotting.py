@@ -34,7 +34,7 @@ def plot_1d(
         data_units = conversion["units"]
     else:
         data_units = data[name]['units']
-        
+
     data_1d = np.log10(data_1d) if log else data_1d
 
     if "z" not in data:
@@ -139,8 +139,10 @@ def plot_2d(
 
     data_plot_lims = kwargs.pop(
         "data_plot_lims",
-        data[name].get("data_plot_lims", [np.min(data_2d), np.max(data_2d)]),
+        data[name].get("data_plot_lims", None),
     )
+    if data_plot_lims is None:
+        data_plot_lims = [np.min(data_2d), np.max(data_2d)]
     p = ax.imshow(
         data_2d,
         extent=extent,
