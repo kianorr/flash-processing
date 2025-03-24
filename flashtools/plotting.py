@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from utils import get_closest, parse_params_file
-from data_index import compute
+from flashtools.utils import get_closest, parse_params_file
+from flashtools.data_index import compute
 from scipy.ndimage import rotate
 
 # TODO: convert units option for input {"units": label, "convert_to": lambda x: x * ...}
@@ -18,6 +18,7 @@ def plot_1d(
     return_data=False,
     extent=None,
     conversion=None,
+    z_offset=0,
     **kwargs,
 ):
     """if z, slice should be with the target ending at zero."""
@@ -29,7 +30,11 @@ def plot_1d(
     data_1d = data[name]["data"]
     data_1d = data_1d[:, ::-1]
     if conversion is not None:
-        data_1d = conversion(data_1d)
+        data_1d = conversion["convert"](data_1d)
+        data_units = conversion["units"]
+    else:
+        data_units = data[name]['units']
+        
     data_1d = np.log10(data_1d) if log else data_1d
 
     if "z" not in data:
@@ -37,7 +42,7 @@ def plot_1d(
     if "r" not in data:
         data = compute("r", obj, data=data, time_ns=0)
     r = np.unique(data["r"]["data"][:, :, 0])
-    z = np.unique(data["z"]["data"][:, :, 0]) - target_height
+    z = np.unique(data["z"]["data"][:, :, 0]) + z_offset
     xaxis_name = "r" if slice_of == "z" else "z"
 
     if slice_of == "z":
@@ -64,7 +69,7 @@ def plot_1d(
 
     yaxis_label = f"log({data[name]['label']})" if log else data[name]["label"]
     ax.set_xlabel(f"{xaxis_name} [{data[xaxis_name]['units']}]", fontsize=15)
-    ax.set_ylabel(f"{yaxis_label} [{data[name]['units']}]", fontsize=15)
+    ax.set_ylabel(f"{yaxis_label} [{data_units}]", fontsize=15)
     if title:
         ax.set_title(
             f"{slice_of} = {spatial_slice} {data[slice_of]['units']}", fontsize=15
@@ -82,7 +87,8 @@ def plot_2d(
     data,
     ax,
     return_data=False,
-    extent=[-0.1, 0.1, -0.05, 0.45],
+    # extent=[-0.1, 0.1, -0.05, 0.45],
+    extent=None,
     z_offset=0,
     cbar=False,
     conversion=None,
@@ -113,12 +119,13 @@ def plot_2d(
     log = kwargs.pop("log", data[name]["log"])
     # target will always be between (-target_height, 0)
     # target_height = parse_params_file(obj=obj)["sim_targetHeight"]
-    # if extent is None:
-    #     if "z" not in data:
-    #         data = compute("z", obj, 0, data=data)
-    #     z = np.unique(data["z"]["data"][:, :, 0]) - target_height
+    if "z" not in data:
+        data = compute("z", obj, 0, data=data)
+    z = np.unique(data["z"]["data"][:, :, 0])
+    if extent is None:
     #     z_range = np.max(z) - np.min(z)
-    #     z += z_offset
+        z += z_offset
+        extent=[-0.1, 0.1, np.min(z), np.max(z)]
 
     data_2d = data[name]["data"][:, :, 0]
     if conversion is not None:

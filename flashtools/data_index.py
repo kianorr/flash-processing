@@ -3,7 +3,7 @@ import numpy as np
 import os
 import scipy.constants
 import yt
-from utils import load_2d_data, load_time_series, convert_to_eV
+from flashtools.utils import load_2d_data, load_time_series, convert_to_eV
 
 data_index = {}
 

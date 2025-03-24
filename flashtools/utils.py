@@ -6,6 +6,9 @@ import yt
 
 yt.set_log_level(50)
 
+# TODO: should probably be a class with the attributes being
+# object_dir, object_parent_dir, variables, log_variables
+
 
 # TODO: global bad bad bad
 def set_objects_parent_dir(new_dir):
@@ -23,7 +26,7 @@ def parse_file(
     break_func=None,
 ):
     variables = {}
-    object_dir = find_path_to_object((object_parent_dir, obj), object_dir)
+    object_dir = find_path_to_object(obj, object_dir)
     if separator is None:
         separator = ":" if ".log" in filename else "="
     filename = os.path.join(object_dir, filename)
@@ -97,13 +100,13 @@ def find_directory(parent_directory, xxx):
     return directories
 
 
-def find_path_to_object(obj_parent_and_id:tuple=None, object_dir=None):
+def find_path_to_object(obj=None, object_dir=None):
     """
     obj_dir_info: tuple of (parent_directory, object_number)
     object_dir: path to object
     """
-    if obj_parent_and_id is not None:
-        object_dir = find_directory(*obj_parent_and_id)[0]
+    if obj is not None:
+        object_dir = find_directory(object_parent_dir, obj)[0]
     if object_dir is None:
         raise ValueError("Must provide either an object number or a path to object.")
     return object_dir
@@ -117,7 +120,7 @@ def convert_to_eV(temp_C):
 
 def find_log_file(obj=None, object_dir=None):
     # TODO: generalize to par file?
-    object_dir = find_path_to_object((object_parent_dir, obj), object_dir)
+    object_dir = find_path_to_object(obj, object_dir)
     for path in os.listdir(object_dir):
         if ".log" in path:
             with open(os.path.join(object_dir, path), "r") as file:
@@ -126,7 +129,7 @@ def find_log_file(obj=None, object_dir=None):
 
 
 def load_time_series(obj=None, object_dir=None, output_dir="output"):
-    object_dir = find_path_to_object((object_parent_dir, obj), object_dir)
+    object_dir = find_path_to_object(obj, object_dir)
     variables = parse_params_file(
         object_dir=object_dir, filename="flash.par"
     )
@@ -148,7 +151,7 @@ def load_2d_data(
     time_index=None,
     output_dir="output",
 ):
-    object_dir = find_path_to_object((object_parent_dir, obj), object_dir)
+    object_dir = find_path_to_object(obj, object_dir)
     if ts is None:
         ts = load_time_series(
             object_dir=object_dir, output_dir=output_dir
@@ -162,6 +165,7 @@ def load_2d_data(
     elif ds is None:
         raise ValueError("Must provide a time.")
 
+    # TODO: these are not time dependent so could be moved to a separate function
     variables = parse_params_file(
         object_dir=object_dir, filename="flash.par"
     )
