@@ -26,7 +26,7 @@ def parse_file(
     break_func=None,
 ):
     variables = {}
-    object_dir = find_path_to_object(obj, object_dir)
+    object_dir = find_path_to_object(object_dir, obj)
     if separator is None:
         separator = ":" if ".log" in filename else "="
     filename = os.path.join(object_dir, filename)
@@ -100,7 +100,7 @@ def find_directory(parent_directory, xxx):
     return directories
 
 
-def find_path_to_object(obj=None, object_dir=None):
+def find_path_to_object(object_dir=None, obj=None):
     """
     obj_dir_info: tuple of (parent_directory, object_number)
     object_dir: path to object
@@ -120,7 +120,7 @@ def convert_to_eV(temp_C):
 
 def find_log_file(obj=None, object_dir=None):
     # TODO: generalize to par file?
-    object_dir = find_path_to_object(obj, object_dir)
+    object_dir = find_path_to_object(object_dir, obj)
     for path in os.listdir(object_dir):
         if ".log" in path:
             with open(os.path.join(object_dir, path), "r") as file:
@@ -129,7 +129,7 @@ def find_log_file(obj=None, object_dir=None):
 
 
 def load_time_series(obj=None, object_dir=None, output_dir="output"):
-    object_dir = find_path_to_object(obj, object_dir)
+    object_dir = find_path_to_object(object_dir, obj)
     variables = parse_params_file(
         object_dir=object_dir, filename="flash.par"
     )
@@ -151,7 +151,7 @@ def load_2d_data(
     time_index=None,
     output_dir="output",
 ):
-    object_dir = find_path_to_object(obj, object_dir)
+    object_dir = find_path_to_object(object_dir, obj)
     if ts is None:
         ts = load_time_series(
             object_dir=object_dir, output_dir=output_dir
