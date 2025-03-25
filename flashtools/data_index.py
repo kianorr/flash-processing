@@ -81,6 +81,19 @@ def shok(data, data_yt, **kwargs):
 
 
 @register_compute_func(
+    name="depo",
+    label="energy deposition",
+    units="ergs/g",
+    cmap="plasma",
+    plot_log10=False,
+    data_deps=[],
+)
+def depo(data, data_yt, **kwargs):
+    data["depo"] = {"data": data_yt["depo"].value}
+    return data
+
+
+@register_compute_func(
     name="dens",
     label=r"$\rho$",
     units="g/cm$^3$",
@@ -333,6 +346,7 @@ def B_z(data, data_yt, **kwargs):
     data_deps=["magz"],
     divergent=True,
     plot_log10=False,
+    data_plot_lims=[-200, 200]
 )
 def B_phi(data, data_yt, **kwargs):
     data["B_phi"] = {"data": data["magz"]["data"] * np.sqrt(4 * np.pi) * 1e-3}
