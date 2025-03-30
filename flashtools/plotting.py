@@ -1,8 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from flashtools.utils import get_closest, parse_params_file
-from flashtools.data_index import compute
+from flashtools.compute import compute, data_index
 from scipy.ndimage import rotate
+import warnings
 
 # TODO: convert units option for input {"units": label, "convert_to": lambda x: x * ...}
 
@@ -11,75 +12,94 @@ def plot_1d(
     name,
     data,
     ax,
-    spatial_slice,
-    title=False,
-    slice_of="z",
-    label="",
-    return_data=False,
-    extent=None,
-    conversion=None,
+    # maybe I should be doing
+    # xslice=None,
+    # yslice=None,
+    # zslice=None,
+    spatial_slice=None,
+    slice_of=None,
+    x_range=None,
+    y_range=None,
     z_offset=0,
+    title=False,
+    label="",
+    conversion=None,
+    return_data=False,
     **kwargs,
 ):
     """if z, slice should be with the target ending at zero."""
-    # TODO: don't need slice_of if you have r, z keywords
-    # TODO: make limits actually change data
+    data_1d = data[name]["data"].squeeze()
+    coordinates = [data_index[name]["coordinates"][i] for i in range(data_1d.ndim)]
+    # axis_ind_map = {data_index[name]["basis"][i]: i for i in range(data_1d.ndim)}
+    axis_ind_map = {"r": 0, "z": 1, "p": 2}
+
+    if (spatial_slice is None or slice_of is None) and data[name]["data"].ndim > 1:
+        raise ValueError("Must provide a slice in r or z for 2D data.")
+
+    allowed_kwargs = ["log"]
+    for kwarg in kwargs:
+        if kwarg not in allowed_kwargs:
+            warnings.warn(f"Inputted kwarg {kwarg} not in known kwargs.")
+    
     obj = data[name]["object_id"]
-    target_height = parse_params_file(obj)["sim_targetHeight"]
-    log = kwargs.pop("log", data[name]["log"])
-    data_1d = data[name]["data"]
-    data_1d = data_1d[:, ::-1]
+    log = kwargs.pop("log", data_index[name]["log"])
+    for coord in coordinates:
+        if coord not in data:
+            data = compute(coord, obj, data=data, time_ns=0)
+
+    # check this so we can reverse array in good conscious
+    z_spacing = np.diff(data["z"]["data"])
+    if not np.allclose(z_spacing, z_spacing[0], atol=1e-10):
+        raise NotImplementedError("z is not uniformly spaced.")
+    
+    # reverse array in Z because target is at the top in FLASH
+    s = np.array([slice(None), slice(None, None, -1), slice(None)])
+    s = s[[axis_ind_map[coordinates[i]] for i in range(data_1d.ndim)]]
+    data_1d = data_1d[*s]
+
     if conversion is not None:
         data_1d = conversion["convert"](data_1d)
         data_units = conversion["units"]
     else:
-        data_units = data[name]['units']
+        data_units = data_index[name]['units']
+    if log:
+        data_1d = np.log10(data_1d)
 
-    data_1d = np.log10(data_1d) if log else data_1d
-
-    if "z" not in data:
-        data = compute("z", obj, data=data, time_ns=0)
-    if "r" not in data:
-        data = compute("r", obj, data=data, time_ns=0)
-    r = np.unique(data["r"]["data"][:, :, 0])
-    z = np.unique(data["z"]["data"][:, :, 0]) + z_offset
+    # could maybe make this more general by popping keys in axis_ind_map
+    offset = lambda coord_name: (0 if coord_name == "r" else z_offset)
     xaxis_name = "r" if slice_of == "z" else "z"
+    x_axis = data[xaxis_name]["data"] + offset(xaxis_name)
 
-    if slice_of == "z":
-        data_1d = data_1d[:, get_closest(z, spatial_slice), 0]
-        x_axis = r.copy()
-    elif slice_of == "r":
-        data_1d = data_1d[get_closest(r, spatial_slice), :, 0]
-        x_axis = z.copy()
 
-    # if extent is not None:
-    #     for i, lim in enumerate(extent):
-    #         if lim is None:
-    #             extent[i] = np.min(x_axis) if i % 2 == 0 else np.min(data_1d)
-    #             extent[i] = np.max(x_axis) if i % 2 == 1 else np.max(data_1d)
-    #             # extent[i] = [r, z][i].min() if i % 2 == 0 else [r, z][i].max()
-    #             # extent[i] = [0, 1][i] * [r, z][i].max()
-    if extent is not None:
-        x_range = (x_axis >= extent[0]) & (x_axis <= extent[1])
-    else:
-        x_range = slice(None)
-        # y_range = (data_1d >= data_1d[x_range]) & (data_1d <= extent[3])
-    x_axis = x_axis[x_range]
-    data_1d = data_1d[x_range]
+    if spatial_slice is not None:
+        spatial_slice_ind = get_closest(data[slice_of]["data"] + offset(slice_of), spatial_slice)
+        s = [slice(None), slice(None)]
+        s[axis_ind_map[slice_of]] = slice(spatial_slice_ind, spatial_slice_ind + 1)
+        data_1d = data_1d[*s].squeeze()
+
+
+    if x_range is None:
+        x_range = [np.min(x_axis), np.max(x_axis)]
+    if y_range is None:
+        y_range = [np.min(data_1d), np.max(data_1d)]
+    x_mask = (x_axis >= x_range[0]) & (x_axis <= x_range[1])
+    y_mask = (data_1d >= y_range[0]) & (data_1d <= y_range[1])
+    x_axis = x_axis[x_mask & y_mask]
+    data_1d = data_1d[x_mask & y_mask]
 
     yaxis_label = f"log({data[name]['label']})" if log else data[name]["label"]
     ax.set_xlabel(f"{xaxis_name} [{data[xaxis_name]['units']}]", fontsize=15)
     ax.set_ylabel(f"{yaxis_label} [{data_units}]", fontsize=15)
     if title:
         ax.set_title(
-            f"{slice_of} = {spatial_slice} {data[slice_of]['units']}", fontsize=15
+            f"{slice_of} = {spatial_slice} {data_index[slice_of]['units']}", fontsize=15
         )
-
-    label = f"{label} ({obj})"
+    obj_text = f"(obj {obj})"
+    label = label + rf" $^{{\text{{{obj_text}}}}}$"
     ax.plot(x_axis, data_1d, label=label)
 
     if return_data:
-        return {"x": x_axis, "y": data_1d}
+        return {"x": x_axis, "y": data_1d.squeeze()}
 
 
 def plot_2d(
@@ -113,21 +133,22 @@ def plot_2d(
     kwargs: dict
         Allowed kwargs are log, data_plot_lims. The rest go to imshow.
     """
-    # TODO: generalize to colliding jets
+
+    allowed_kwargs = ["data_plot_lims", "log"]
+    for kwarg in kwargs:
+        if kwarg not in allowed_kwargs:
+            warnings.warn(f"Inputted kwarg {kwarg} not in known kwargs.")
 
     obj = data[name]["object_id"]
     log = kwargs.pop("log", data[name]["log"])
-    # target will always be between (-target_height, 0)
-    # target_height = parse_params_file(obj=obj)["sim_targetHeight"]
     if "z" not in data:
         data = compute("z", obj, 0, data=data)
-    z = np.unique(data["z"]["data"][:, :, 0])
+    z = data["z"]["data"]
     if extent is None:
-    #     z_range = np.max(z) - np.min(z)
         z += z_offset
         extent=[-0.1, 0.1, np.min(z), np.max(z)]
 
-    data_2d = data[name]["data"][:, :, 0]
+    data_2d = data[name]["data"].squeeze()
     if conversion is not None:
         data_2d = conversion(data_2d)
     data_2d = np.log10(data_2d) if log else data_2d
@@ -143,6 +164,7 @@ def plot_2d(
     )
     if data_plot_lims is None:
         data_plot_lims = [np.min(data_2d), np.max(data_2d)]
+
     p = ax.imshow(
         data_2d,
         extent=extent,
@@ -154,8 +176,6 @@ def plot_2d(
     )
     ax.grid(False)
     ax.text(
-        # -0.09,
-        # -0.04,
         extent[0] + 0.01,
         extent[2] + 0.01,
         f"object {obj}",
