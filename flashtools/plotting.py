@@ -5,8 +5,6 @@ from flashtools.compute import compute, data_index
 from scipy.ndimage import rotate
 import warnings
 
-# TODO: convert units option for input {"units": label, "convert_to": lambda x: x * ...}
-
 
 def plot_1d(
     name,
@@ -16,6 +14,7 @@ def plot_1d(
     # xslice=None,
     # yslice=None,
     # zslice=None,
+    # or make slice_of a list
     spatial_slice=None,
     slice_of=None,
     x_range=None,
@@ -30,8 +29,7 @@ def plot_1d(
     """if z, slice should be with the target ending at zero."""
     data_1d = data[name]["data"].squeeze()
     coordinates = [data_index[name]["coordinates"][i] for i in range(data_1d.ndim)]
-    # axis_ind_map = {data_index[name]["basis"][i]: i for i in range(data_1d.ndim)}
-    axis_ind_map = {"r": 0, "z": 1, "p": 2}
+    axis_ind_map = {coord: i for i, coord in enumerate(data_index[name]["basis"])}
 
     if (spatial_slice is None or slice_of is None) and data[name]["data"].ndim > 1:
         raise ValueError("Must provide a slice in r or z for 2D data.")
@@ -40,7 +38,7 @@ def plot_1d(
     for kwarg in kwargs:
         if kwarg not in allowed_kwargs:
             warnings.warn(f"Inputted kwarg {kwarg} not in known kwargs.")
-    
+
     obj = data[name]["object_id"]
     log = kwargs.pop("log", data_index[name]["log"])
     for coord in coordinates:
@@ -51,8 +49,8 @@ def plot_1d(
     z_spacing = np.diff(data["z"]["data"])
     if not np.allclose(z_spacing, z_spacing[0], atol=1e-10):
         raise NotImplementedError("z is not uniformly spaced.")
-    
-    # reverse array in Z because target is at the top in FLASH
+
+    # reverse array in z (y in xyz?) because target is at the top in FLASH
     s = np.array([slice(None), slice(None, None, -1), slice(None)])
     s = s[[axis_ind_map[coordinates[i]] for i in range(data_1d.ndim)]]
     data_1d = data_1d[*s]
@@ -61,7 +59,7 @@ def plot_1d(
         data_1d = conversion["convert"](data_1d)
         data_units = conversion["units"]
     else:
-        data_units = data_index[name]['units']
+        data_units = data_index[name]["units"]
     if log:
         data_1d = np.log10(data_1d)
 
@@ -70,13 +68,13 @@ def plot_1d(
     xaxis_name = "r" if slice_of == "z" else "z"
     x_axis = data[xaxis_name]["data"] + offset(xaxis_name)
 
-
     if spatial_slice is not None:
-        spatial_slice_ind = get_closest(data[slice_of]["data"] + offset(slice_of), spatial_slice)
+        spatial_slice_ind = get_closest(
+            data[slice_of]["data"] + offset(slice_of), spatial_slice
+        )
         s = [slice(None), slice(None)]
         s[axis_ind_map[slice_of]] = slice(spatial_slice_ind, spatial_slice_ind + 1)
         data_1d = data_1d[*s].squeeze()
-
 
     if x_range is None:
         x_range = [np.min(x_axis), np.max(x_axis)]
@@ -107,7 +105,6 @@ def plot_2d(
     data,
     ax,
     return_data=False,
-    # extent=[-0.1, 0.1, -0.05, 0.45],
     extent=None,
     z_offset=0,
     cbar=False,
@@ -146,7 +143,7 @@ def plot_2d(
     z = data["z"]["data"]
     if extent is None:
         z += z_offset
-        extent=[-0.1, 0.1, np.min(z), np.max(z)]
+        extent = [-0.1, 0.1, np.min(z), np.max(z)]
 
     data_2d = data[name]["data"].squeeze()
     if conversion is not None:
