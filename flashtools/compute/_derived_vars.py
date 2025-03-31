@@ -170,7 +170,7 @@ def B_z(data, data_yt, **kwargs):
     data_deps=["magz"],
     divergent=True,
     plot_log10=False,
-    data_plot_lims=[-200, 200]
+    data_plot_lims=[-200, 200],
 )
 def B_phi(data, data_yt, **kwargs):
     data["B_phi"] = {"data": data["magz"]["data"] * np.sqrt(4 * np.pi) * 1e-3}
@@ -202,7 +202,7 @@ def u_mag(data, data_yt, **kwargs):
     data_deps=["u_mag", "r", "z"],
     divergent=False,
     plot_log10=False,
-    coordinates="z"
+    coordinates="z",
 )
 def int_u_mag(data, data_yt, **kwargs):
     z = data["z"]["data"]

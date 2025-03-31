@@ -1,13 +1,17 @@
 from flashtools.compute.data_index import data_index, register_compute_func
 
 
-@register_compute_func(name="r_FLASH", label="$r$", units="cm", cmap="plasma", data_deps=[])
+@register_compute_func(
+    name="r_FLASH", label="$r$", units="cm", cmap="plasma", data_deps=[]
+)
 def r_FLASH(data, data_yt, **kwargs):
     data["r_FLASH"] = {"data": data_yt["r"].value}
     return data
 
 
-@register_compute_func(name="z_FLASH", label="$Z$", units="cm", cmap="plasma", data_deps=[])
+@register_compute_func(
+    name="z_FLASH", label="$Z$", units="cm", cmap="plasma", data_deps=[]
+)
 def z_FLASH(data, data_yt, **kwargs):
     data["z_FLASH"] = {"data": data_yt["z"].value}
     return data
@@ -45,7 +49,7 @@ def shok(data, data_yt, **kwargs):
     cmap="plasma",
     plot_log10=False,
     data_deps=[],
-    data_plot_lims=[-0.05, 0.05]
+    data_plot_lims=[-0.05, 0.05],
 )
 def depo(data, data_yt, **kwargs):
     data["depo"] = {"data": data_yt["depo"].value}

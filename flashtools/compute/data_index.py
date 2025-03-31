@@ -5,7 +5,6 @@ import scipy.constants
 import yt
 from flashtools.utils import load_2d_data, load_time_series, convert_to_eV
 
-# TODO: add dim to each variable and make r, z dim=1
 
 data_index = {}
 
@@ -85,10 +84,8 @@ def compute(
                 **kwargs
             )
 
-        # TODO: don't include these in data_index 
+        # TODO: don't include these in data_index
         data_index[name].update(object_id=obj, time_ns=ds.current_time.value * 1e9)
-        # data[name] = data_index[name].copy()
-        # data[name]["data"] = data_index[name]["fun"](data, data_yt, **kwargs)
         data = data_index[name]["fun"](data, data_yt, **kwargs)
         for key in data_index[name].keys():
             data[name][key] = data_index[name][key]
