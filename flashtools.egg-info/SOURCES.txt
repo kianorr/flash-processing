@@ -2,10 +2,13 @@ README.md
 pyproject.toml
 setup.py
 flashtools/__init__.py
-flashtools/data_index.py
 flashtools/plotting.py
 flashtools/utils.py
 flashtools.egg-info/PKG-INFO
 flashtools.egg-info/SOURCES.txt
 flashtools.egg-info/dependency_links.txt
 flashtools.egg-info/top_level.txt
+flashtools/compute/__init__.py
+flashtools/compute/_derived_vars.py
+flashtools/compute/_flash_vars.py
+flashtools/compute/data_index.py

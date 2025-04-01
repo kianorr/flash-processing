@@ -27,9 +27,9 @@ def plot_1d(
     **kwargs,
 ):
     """if z, slice should be with the target ending at zero."""
-    data_1d = data[name]["data"].squeeze()
-    coordinates = [data_index[name]["coordinates"][i] for i in range(data_1d.ndim)]
-    axis_ind_map = {coord: i for i, coord in enumerate(data_index[name]["basis"])}
+    data_nd = data[name]["data"].squeeze()
+    coordinates = [data_index[name]["coordinates"][i] for i in range(data_nd.ndim)]
+    axis_ind_map = {coord: i for i, coord in enumerate(coordinates)}
 
     if (spatial_slice is None or slice_of is None) and data[name]["data"].ndim > 1:
         raise ValueError("Must provide a slice in r or z for 2D data.")
@@ -51,17 +51,19 @@ def plot_1d(
         raise NotImplementedError("z is not uniformly spaced.")
 
     # reverse array in z (y in xyz?) because target is at the top in FLASH
-    s = np.array([slice(None), slice(None, None, -1), slice(None)])
-    s = s[[axis_ind_map[coordinates[i]] for i in range(data_1d.ndim)]]
-    data_1d = data_1d[*s]
+    # s = np.array([slice(None), slice(None, None, -1), slice(None)]) # :, ::-1, :
+    # s = s[[axis_ind_map[coordinates[i]] for i in range(data_nd.ndim)]]
+    # data_nd = data_nd[*s]
+    axis_to_reverse = list(data_index[name]["basis"])[1]
+    data_nd = np.flip(data_nd, axis=axis_ind_map[axis_to_reverse])
 
     if conversion is not None:
-        data_1d = conversion["convert"](data_1d)
+        data_nd = conversion["convert"](data_nd)
         data_units = conversion["units"]
     else:
         data_units = data_index[name]["units"]
     if log:
-        data_1d = np.log10(data_1d)
+        data_nd = np.log10(data_nd)
 
     # could maybe make this more general by popping keys in axis_ind_map
     offset = lambda coord_name: (0 if coord_name == "r" else z_offset)
@@ -74,7 +76,9 @@ def plot_1d(
         )
         s = [slice(None), slice(None)]
         s[axis_ind_map[slice_of]] = slice(spatial_slice_ind, spatial_slice_ind + 1)
-        data_1d = data_1d[*s].squeeze()
+        data_1d = data_nd[*s].squeeze()
+    else:
+        data_1d = data_nd.copy()
 
     if x_range is None:
         x_range = [np.min(x_axis), np.max(x_axis)]
@@ -104,6 +108,8 @@ def plot_2d(
     name,
     data,
     ax,
+    x_range=None,
+    y_range=None,
     return_data=False,
     extent=None,
     z_offset=0,
@@ -140,7 +146,10 @@ def plot_2d(
     log = kwargs.pop("log", data[name]["log"])
     if "z" not in data:
         data = compute("z", obj, 0, data=data)
+    if "r" not in data:
+        data = compute("r", obj, 0, data=data)
     z = data["z"]["data"]
+    r = data["r"]["data"]
     if extent is None:
         z += z_offset
         extent = [-0.1, 0.1, np.min(z), np.max(z)]
@@ -161,6 +170,16 @@ def plot_2d(
     )
     if data_plot_lims is None:
         data_plot_lims = [np.min(data_2d), np.max(data_2d)]
+
+    # if x_range is None:
+    #     x_range = [-np.max(r), np.max(r)]
+    # if y_range is None:
+    #     y_range = [np.min(z), np.max(z)]
+    # x_mask = (r >= x_range[0]) & (r <= x_range[1])
+    # y_mask = (z >= y_range[0]) & (z <= y_range[1])
+    # r = r[x_mask]
+    # z = z[y_mask]
+    # data_2d = data_2d[np.ix_(x_mask, y_mask)]
 
     p = ax.imshow(
         data_2d,
