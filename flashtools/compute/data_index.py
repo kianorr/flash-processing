@@ -1,9 +1,4 @@
-import scipy
-import numpy as np
-import os
-import scipy.constants
-import yt
-from flashtools.utils import load_2d_data, load_time_series, convert_to_eV
+from flashtools.utils import load_2d_data, load_time_series, load_ds
 
 
 data_index = {}
@@ -51,8 +46,9 @@ def register_compute_func(
 def compute(
     names,
     # TODO: add object_dir, output_dir
-    obj,
+    obj=None,
     time_ns=None,
+    object_dir=None,
     time_ind=None,
     data_yt=None,
     ts=None,
@@ -60,10 +56,17 @@ def compute(
     data=None,
     **kwargs
 ):
-    if ts is None:
-        ts = load_time_series(obj)
-    if data_yt is None or ds is None:
-        data_yt, ds = load_2d_data(obj, time_ns=time_ns, time_index=time_ind, ts=ts)
+    """Have to give some form of an object and some form of a time.
+    obj, ts, data_yt, relate to a specific object. 
+    ds, time_ns, time_ind refer to a specific time within that object
+    """
+    if ds is None:
+        if ts is None:
+            ts = load_time_series(obj, object_dir)
+        ds = load_ds(ts, time_ns, time_ind)
+
+    if data_yt is None:
+        data_yt, __ = load_2d_data(obj, object_dir, time_ns=time_ns, time_index=time_ind, ts=ts, ds=ds)
     if data is None:
         data = {}
     if isinstance(names, str):
@@ -75,6 +78,7 @@ def compute(
             data = compute(
                 data_index[name]["deps"]["data"],
                 obj,
+                object_dir=object_dir,
                 time_ns=time_ns,
                 time_ind=time_ind,
                 data_yt=data_yt,
@@ -85,7 +89,7 @@ def compute(
             )
 
         # TODO: don't include these in data_index
-        data_index[name].update(object_id=obj, time_ns=ds.current_time.value * 1e9)
+        data_index[name].update(object_id=obj, object_path=object_dir, time_ns=ds.current_time.value * 1e9)
         data = data_index[name]["fun"](data, data_yt, **kwargs)
         for key in data_index[name].keys():
             data[name][key] = data_index[name][key]

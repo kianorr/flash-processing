@@ -1,16 +1,16 @@
-from .data_index import register_compute_func, data_index
 import scipy
 import numpy as np
+from .data_index import register_compute_func, data_index
 from flashtools.utils import convert_to_eV
 
 
-@register_compute_func(name="r", label="$r$", units="cm", data_deps=["r_FLASH"])
+@register_compute_func(name="r", label="$r$", units="cm", data_deps=["r_FLASH"], coordinates="r")
 def r(data, data_yt, **kwargs):
     data["r"] = {"data": np.unique(data["r_FLASH"]["data"][:, :, 0])}
     return data
 
 
-@register_compute_func(name="z", label="$Z$", units="cm", data_deps=["z_FLASH"])
+@register_compute_func(name="z", label="$Z$", units="cm", data_deps=["z_FLASH"], coordinates="z")
 def z(data, data_yt, **kwargs):
     data["z"] = {"data": np.unique(data["z_FLASH"]["data"][:, :, 0])}
     return data
@@ -148,7 +148,7 @@ def B_r(data, data_yt, **kwargs):
 
 @register_compute_func(
     name="B_z",
-    label=r"$B_{\phi}$",
+    label=r"$B_z$",
     description="Corrected Bz",
     units="kG",
     cmap="RdBu",
@@ -190,27 +190,6 @@ def B_phi(data, data_yt, **kwargs):
 def u_mag(data, data_yt, **kwargs):
     FLASH_factor = np.sqrt(4 * np.pi)
     data["u_mag"] = {"data": (data["magz"]["data"] * FLASH_factor) ** 2 / (8 * np.pi)}
-    return data
-
-
-@register_compute_func(
-    name="int_u_mag",
-    label="$\int r$" + f"{data_index['u_mag']['label']}" + "d$r$",
-    units="ergs/cm",
-    description="Integrated internal magnetic energy along.",
-    cmap="plasma",
-    data_deps=["u_mag", "r", "z"],
-    divergent=False,
-    plot_log10=False,
-    coordinates="z",
-)
-def int_u_mag(data, data_yt, **kwargs):
-    z = data["z"]["data"]
-    r = data["r"]["data"]
-    int_u_mag = np.zeros(len(z))
-    for i, z_slice in enumerate(z):
-        int_u_mag[i] = np.trapezoid(r * data["u_mag"]["data"][:, i, 0], r)
-    data["int_u_mag"] = {"data": int_u_mag}
     return data
 
 
@@ -327,3 +306,66 @@ def vel_mag(data, data_yt, **kwargs):
 def E_dens(data, data_yt, **kwargs):
     data["E_dens"] = {"data": data["dens"]["data"] * data["vel_mag"]["data"] ** 2 / 2}
     return data
+
+
+def integration_1d_helper(name, data):
+    z = data["z"]["data"]
+    r = data["r"]["data"]
+    int_1d = np.zeros(len(z))
+    for i, z_slice in enumerate(z):
+        int_1d[i] = np.trapezoid(r * data[name]["data"][:, i, 0], r)
+    return int_1d
+
+
+@register_compute_func(
+    name="int_u_mag",
+    label="$\int r$" + f"{data_index['u_mag']['label']}" + "d$r$",
+    units="ergs/cm",
+    description="Integrated internal magnetic energy along.",
+    cmap="plasma",
+    data_deps=["u_mag", "r", "z"],
+    divergent=False,
+    plot_log10=False,
+    coordinates="z",
+)
+def int_u_mag(data, data_yt, **kwargs):
+    int_u_mag = integration_1d_helper("u_mag", data)
+    data["int_u_mag"] = {"data": int_u_mag}
+    return data
+
+
+@register_compute_func(
+    name="int_nele",
+    label="$\int r$" + f"{data_index['nele']['label']}" + "d$r$",
+    units="cm$^{-1}$",
+    description="Integrated electron density energy over r along z.",
+    cmap="plasma",
+    data_deps=["nele", "r", "z"],
+    divergent=False,
+    plot_log10=False,
+    coordinates="z",
+)
+def int_nele(data, data_yt, **kwargs):
+    int_nele = integration_1d_helper("nele", data)
+    data["int_nele"] = {"data": int_nele}
+    return data
+
+
+# TODO: implement this with plasmapy units
+def register_integrations(name):
+    @register_compute_func(
+        name="int_" + name,
+        label="$\int r$" + f"{data_index[name]['label']}" + "d$r$",
+        units="cm$^-1$",
+        description=f"Integrated {name} over r along z.",
+        cmap="plasma",
+        data_deps=[name, "r", "z"],
+        divergent=False,
+        plot_log10=False,
+        coordinates="z",
+    )
+    # function name might be tricky
+    def int_nele(data, data_yt, **kwargs):
+        int_name = integration_1d_helper("int_" + name, data)
+        data["int_" + name] = {"data": int_name}
+        return data

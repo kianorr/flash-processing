@@ -83,8 +83,8 @@ def pres(data, data_yt, **kwargs):
 
 @register_compute_func(
     name="tion",
-    label=r"$T_i_{\text{FLASH}}$",
-    units="C",
+    label=r"$T_{i_{\text{FLASH}}}$",
+    units="$\degree$C",
     cmap="plasma",
     data_deps=[],
 )
@@ -95,8 +95,8 @@ def tion(data, data_yt, **kwargs):
 
 @register_compute_func(
     name="tele",
-    label=r"$T_e_{\text{FLASH}}$",
-    units="C",
+    label=r"$T_{e_{\text{FLASH}}}$",
+    units="$\degree$C",
     cmap="plasma",
     data_deps=[],
 )
@@ -108,7 +108,7 @@ def tele(data, data_yt, **kwargs):
 @register_compute_func(
     name="trad",
     label=r"$T_{\text{rad}_{\text{FLASH}}}$",
-    units="C",
+    units="$\degree$C",
     cmap="plasma",
     data_deps=[],
 )
