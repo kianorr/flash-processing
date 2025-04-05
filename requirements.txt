@@ -25,7 +25,6 @@ ewah_bool_utils==1.2.2
 executing==2.1.0
 f90nml==1.4.4
 fastjsonschema==2.21.1
--e git+https://github.com/kianorr/FLASHDataProcessing.git@cecd4759ddf911f9a1ac30edb4c3989223b9a5af#egg=flashtools
 fonttools==4.55.0
 fqdn==1.5.1
 h11==0.14.0

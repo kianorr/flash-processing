@@ -14,6 +14,7 @@ conda activate flash-env
 git clone https://github.com/kianorr/flash-processing.git
 cd flash-processing
 pip install --editable .
+pip install -r requirements.txt
 ```
 
 ## compute and plot example
