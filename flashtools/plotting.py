@@ -33,6 +33,9 @@ def plot_1d(
 
     if (spatial_slice is None or slice_of is None) and data[name]["data"].ndim > 1:
         raise ValueError("Must provide a slice in r or z for 2D data.")
+    if data_nd.ndim == 1 and (spatial_slice is not None or slice_of is not None):
+        spatial_slice = None
+        slice_of = None
 
     allowed_kwargs = ["log"]
     for kwarg in kwargs:
@@ -40,10 +43,12 @@ def plot_1d(
             warnings.warn(f"Inputted kwarg {kwarg} not in known kwargs.")
 
     obj = data[name]["object_id"]
+    
     log = kwargs.pop("log", data_index[name]["log"])
     for coord in coordinates:
         if coord not in data:
-            data = compute(coord, obj, data=data, time_ns=0)
+            obj_path = data[name]["object_path"]
+            data = compute(coord, obj, object_dir=obj_path, data=data, time_ns=0)
 
     # check this so we can reverse array in good conscious
     z_spacing = np.diff(data["z"]["data"])
@@ -51,9 +56,6 @@ def plot_1d(
         raise NotImplementedError("z is not uniformly spaced.")
 
     # reverse array in z (y in xyz?) because target is at the top in FLASH
-    # s = np.array([slice(None), slice(None, None, -1), slice(None)]) # :, ::-1, :
-    # s = s[[axis_ind_map[coordinates[i]] for i in range(data_nd.ndim)]]
-    # data_nd = data_nd[*s]
     axis_to_reverse = list(data_index[name]["basis"])[1]
     data_nd = np.flip(data_nd, axis=axis_ind_map[axis_to_reverse])
 
@@ -98,7 +100,7 @@ def plot_1d(
         )
     obj_text = f"(obj {obj})"
     label = label + rf" $^{{\text{{{obj_text}}}}}$"
-    ax.plot(x_axis, data_1d, label=label)
+    ax.plot(x_axis, data_1d, label=label, **kwargs)
 
     if return_data:
         return {"x": x_axis, "y": data_1d.squeeze()}
@@ -137,49 +139,55 @@ def plot_2d(
         Allowed kwargs are log, data_plot_lims. The rest go to imshow.
     """
 
+    data_2d = data[name]["data"].squeeze()
+    obj = data[name]["object_id"]
+    coordinates = [data_index[name]["coordinates"][i] for i in range(data_2d.ndim)]
+
+
     allowed_kwargs = ["data_plot_lims", "log"]
     for kwarg in kwargs:
         if kwarg not in allowed_kwargs:
             warnings.warn(f"Inputted kwarg {kwarg} not in known kwargs.")
-
-    obj = data[name]["object_id"]
     log = kwargs.pop("log", data[name]["log"])
-    if "z" not in data:
-        data = compute("z", obj, 0, data=data)
-    if "r" not in data:
-        data = compute("r", obj, 0, data=data)
-    z = data["z"]["data"]
-    r = data["r"]["data"]
-    if extent is None:
-        z += z_offset
-        extent = [-0.1, 0.1, np.min(z), np.max(z)]
+    data_plot_lims = kwargs.pop(
+        "data_plot_lims",
+        data[name].get("data_plot_lims", None),
+    )
 
-    data_2d = data[name]["data"].squeeze()
+
+    for coord in coordinates:
+        if coord not in data:
+            obj_path = data[name]["object_path"]
+            data = compute(coord, obj, 0, obj_path, data=data)
+    z = data["z"]["data"]
+    z += z_offset
+    r = data["r"]["data"]
+    r = np.append(-r[::-1], r)
+
+
     if conversion is not None:
         data_2d = conversion(data_2d)
     data_2d = np.log10(data_2d) if log else data_2d
     # rotate data so that target is at the bottom of the plot
     data_2d = rotate(data_2d, angle=90, reshape=True)
-    # data_2d = data_2d[(z >= extent[2]) & (z <= extent[3]), :]
+    # mainly for magnetic fields
     reflected_data_sign = -1 if data[name]["divergent"] else 1
+    # reflect data across r = 0 axis since data is axisymmetric
     data_2d = np.append(reflected_data_sign * np.fliplr(data_2d), data_2d, axis=1)
 
-    data_plot_lims = kwargs.pop(
-        "data_plot_lims",
-        data[name].get("data_plot_lims", None),
-    )
+
+    if x_range is None:
+        x_range = [np.min(r), np.max(r)]
+    if y_range is None:
+        y_range = [np.min(z), np.max(z)]
+    x_mask = (r >= x_range[0]) & (r <= x_range[1])
+    y_mask = (z >= y_range[0]) & (z <= y_range[1])
+    data_2d = data_2d[np.ix_(y_mask, x_mask)]
+
+    extent = [*x_range, *y_range]
+
     if data_plot_lims is None:
         data_plot_lims = [np.min(data_2d), np.max(data_2d)]
-
-    # if x_range is None:
-    #     x_range = [-np.max(r), np.max(r)]
-    # if y_range is None:
-    #     y_range = [np.min(z), np.max(z)]
-    # x_mask = (r >= x_range[0]) & (r <= x_range[1])
-    # y_mask = (z >= y_range[0]) & (z <= y_range[1])
-    # r = r[x_mask]
-    # z = z[y_mask]
-    # data_2d = data_2d[np.ix_(x_mask, y_mask)]
 
     p = ax.imshow(
         data_2d,
