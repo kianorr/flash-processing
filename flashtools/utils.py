@@ -6,16 +6,13 @@ import yt
 
 yt.set_log_level(50)
 
-# TODO: should probably be a class with the attributes being
-# object_dir, object_parent_dir, variables, log_variables
-
 
 # TODO: global bad bad bad
 def set_object_grandparent_dir(new_dir):
     global object_grandparent_dir
     object_grandparent_dir = new_dir
     if not os.path.exists(object_grandparent_dir):
-        raise ValueError("Directory does not exist.")
+        raise ValueError(f"Directory {new_dir} does not exist.")
 
 
 def parse_file(
@@ -152,16 +149,23 @@ def load_time_series(
 ):
     object_dir = find_path_to_object(object_dir, obj)
     variables = parse_params_file(object_dir=object_dir)
-    try:
-        hdf5_files = os.path.join(
-            output_dir, variables["basenm"] + f"hdf5_{plot_ext}_*"
-        )
-        ts = yt.load(os.path.join(object_dir, hdf5_files))
-    except OSError:
-        hdf5_files = os.path.join(output_dir, variables["basenm"] + "hdf5_chk_*")
-        ts = yt.load(os.path.join(object_dir, hdf5_files))
+    hdf5_files = os.path.join(
+        output_dir, variables["basenm"] + f"hdf5_{plot_ext}_*"
+    )
+    ts = yt.load(os.path.join(object_dir, hdf5_files))
     return ts
 
+
+def load_ds(ts, time_ns=None, time_index=None):
+    if time_ns is not None:
+        ds = ts.get_by_time((time_ns * 1e-9, "s"))
+    elif time_index is not None:
+        ds = ts[time_index]
+    else:
+        raise ValueError("Must provide a time.")
+    
+    return ds
+    
 
 def load_2d_data(
     obj=None,
@@ -171,33 +175,33 @@ def load_2d_data(
     time_ns=None,
     time_index=None,
     output_dir="output",
+    refinement_level=None,
 ):
     object_dir = find_path_to_object(object_dir, obj)
-    if ts is None:
-        ts = load_time_series(object_dir=object_dir, output_dir=output_dir)
-    if time_ns is not None:
-        ds = ts.get_by_time((time_ns * 1e-9, "s"))
-    elif time_index is not None:
-        ds = ts[time_index]
-    elif ds is None:
-        raise ValueError("Must provide a time.")
+    if ds is None:
+        if ts is None:
+            ts = load_time_series(object_dir=object_dir, output_dir=output_dir)
+        ds = load_ds(ts, time_ns, time_index)
 
     # TODO: these are not time dependent so could be moved to a separate function
     variables = parse_params_file(object_dir=object_dir, filename="flash.par")
     log_variables = parse_log_file(object_dir=object_dir)
 
+    if refinement_level is None:
+        refinement_level = variables["lrefine_max"]
+
     nbx = log_variables["Number x zones"]
     nby = log_variables["Number y zones"]
     data_yt = ds.covering_grid(
-        level=variables["lrefine_max"],
+        level=refinement_level,
         left_edge=np.round(ds.index.grids[0].LeftEdge.value, 2),
         dims=[
-            nbx * variables["nblockx"] * 2 ** variables["lrefine_max"],
-            nby * variables["nblocky"] * 2 ** variables["lrefine_max"],
+            nbx * variables["nblockx"] * 2 ** refinement_level,
+            nby * variables["nblocky"] * 2 ** refinement_level,
             1,
         ],
     )
-    # return ds so that it doesn't complain about being temporary
+    # return ds so that it doesn't complain about being a weak reference
     return data_yt, ds
 
 
@@ -209,7 +213,7 @@ def compare_dicts(*dicts):
         all_keys.update(d.keys())
 
     for key in all_keys:
-        values = {i: d.get(key, None) for i, d in enumerate(dicts)}
+        values = {i: d.get(key.lower(), None) for i, d in enumerate(dicts)}
         unique_values = set(values.values())
 
         if len(unique_values) > 1:
