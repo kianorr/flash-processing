@@ -26,8 +26,12 @@ import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots(1, 2, figsize=(8, 4), gridspec_kw={"width_ratios": [0.5, 1]}, dpi=200)
 
+print(f"the things you can compute are {list(data_index.keys())}")
 keys = ["nele", "E_dens"]
-data = compute(keys, time_ns=3, object_dir="path/to/object/folder")
+
+# dictionary of data
+data = compute(keys, time_ns=2.5, object_dir="path/to/object/folder")
+print(f"electron density has dimensions (R, Z, Phi) = {np.shape(data['nele']['data'])}")
 
 plot_2d("nele", data, ax[0], cbar=True)
 plot_1d("E_dens", data, ax[1], slice_of="z", spatial_slice=0.1)
@@ -35,5 +39,4 @@ plot_1d("E_dens", data, ax[1], slice_of="z", spatial_slice=0.1)
 fig.tight_layout()
 plt.show()
 
-print(f"the things you can compute are {list(data_index.keys())}")
 ```
