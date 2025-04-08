@@ -117,6 +117,7 @@ def plot_2d(
     z_offset=0,
     cbar=False,
     conversion=None,
+    title=False,
     **kwargs,
 ):
     """Plots 2d data.
@@ -159,23 +160,25 @@ def plot_2d(
         if coord not in data:
             obj_path = data[name]["object_path"]
             data = compute(coord, obj, 0, obj_path, data=data)
-    z = data["z"]["data"]
+    z = data["z"]["data"].copy()
     z += z_offset
-    r = data["r"]["data"]
+    r = data["r"]["data"].copy()
     r = np.append(-r[::-1], r)
 
 
     if conversion is not None:
         data_2d = conversion(data_2d)
     data_2d = np.log10(data_2d) if log else data_2d
+    # TODO: make orientation more flexible
     # rotate data so that target is at the bottom of the plot
-    data_2d = rotate(data_2d, angle=90, reshape=True)
+    data_2d = data_2d.T
+    data_2d = data_2d[::-1]
     # mainly for magnetic fields
     reflected_data_sign = -1 if data[name]["divergent"] else 1
     # reflect data across r = 0 axis since data is axisymmetric
     data_2d = np.append(reflected_data_sign * np.fliplr(data_2d), data_2d, axis=1)
 
-
+    # zoom in to part of the data
     if x_range is None:
         x_range = [np.min(r), np.max(r)]
     if y_range is None:
@@ -193,11 +196,13 @@ def plot_2d(
         data_2d,
         extent=extent,
         origin="lower",
-        cmap=data[name]["cmap"],
+        cmap=data_index[name]["cmap"],
         vmin=data_plot_lims[0],
         vmax=data_plot_lims[1],
         **kwargs,
     )
+    if title:
+        ax.set_title(f"$t = {data[name]['time_ns']} ns$")
     ax.grid(False)
     ax.text(
         extent[0] + 0.01,
@@ -210,8 +215,8 @@ def plot_2d(
     )
     if cbar:
         cbar = plt.gcf().colorbar(p, ax=ax)
-        label = f"log({data[name]['label']})" if log else data[name]["label"]
-        cbar.set_label(f"{label} [{data[name]['units']}]", fontsize=15)
+        label = f"log({data_index[name]['label']})" if log else data_index[name]["label"]
+        cbar.set_label(f"{label} [{data_index[name]['units']}]", fontsize=15)
 
     if return_data:
         return p, data_2d
