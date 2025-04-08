@@ -84,27 +84,6 @@ def parse_params_file(
     return variables
 
 
-def get_closest(arr, val):
-    """
-    Parameters
-    ----------
-    arr: list or np.ndarray
-    val: list, np.ndarray, float
-
-    Returns
-    -------
-    ind: np.ndarray or number
-        if `val` is list, this will be the same shape as `val`
-    """
-    arr = np.asarray(arr)
-    if isinstance(val, list):
-        val = np.array(val)
-    if not isinstance(val, np.ndarray):
-        val = np.array([val])
-    ind = np.argmin(np.abs(arr - val[..., None]), axis=1)
-    return ind.squeeze()
-
-
 def find_directory(parent_directory, xxx):
     pattern = f"{parent_directory}/**/object_{xxx}___*"
     matches = glob.glob(pattern)
@@ -127,12 +106,6 @@ def find_path_to_object(object_dir=None, obj=None):
     if object_dir is None:
         raise ValueError("Must provide either an object number or a path to object.")
     return object_dir
-
-
-def convert_to_eV(temp_C):
-    temp_kelvin = temp_C + 273.15
-    temp_eV = temp_kelvin * 8.617e-5
-    return temp_eV
 
 
 def find_log_file(obj=None, object_dir=None):
@@ -175,7 +148,8 @@ def load_2d_data(
     time_ns=None,
     time_index=None,
     output_dir="output",
-    refinement_level=None,
+    variables=None,
+    log_variables=None,
 ):
     object_dir = find_path_to_object(object_dir, obj)
     if ds is None:
@@ -183,26 +157,64 @@ def load_2d_data(
             ts = load_time_series(object_dir=object_dir, output_dir=output_dir)
         ds = load_ds(ts, time_ns, time_index)
 
+    
     # TODO: these are not time dependent so could be moved to a separate function
-    variables = parse_params_file(object_dir=object_dir, filename="flash.par")
-    log_variables = parse_log_file(object_dir=object_dir)
-
-    if refinement_level is None:
-        refinement_level = variables["lrefine_max"]
+    if variables is None:
+        variables = parse_params_file(object_dir=object_dir)
+    if log_variables is None:
+        log_variables = parse_log_file(object_dir=object_dir)
+    
 
     nbx = log_variables["Number x zones"]
     nby = log_variables["Number y zones"]
     data_yt = ds.covering_grid(
-        level=refinement_level,
+        level=variables["lrefine_max"],
         left_edge=np.round(ds.index.grids[0].LeftEdge.value, 2),
         dims=[
-            nbx * variables["nblockx"] * 2 ** refinement_level,
-            nby * variables["nblocky"] * 2 ** refinement_level,
+            nbx * variables["nblockx"] * 2 ** variables["lrefine_max"],
+            nby * variables["nblocky"] * 2 ** variables["lrefine_max"],
             1,
         ],
     )
     # return ds so that it doesn't complain about being a weak reference
     return data_yt, ds
+
+
+# TODO: put these in a separate utils file
+def get_closest(arr, val):
+    """
+    Parameters
+    ----------
+    arr: list or np.ndarray
+    val: list, np.ndarray, float
+
+    Returns
+    -------
+    ind: np.ndarray or number
+        if `val` is list, this will be the same shape as `val`
+    """
+    arr = np.asarray(arr)
+    if isinstance(val, list):
+        val = np.array(val)
+    if not isinstance(val, np.ndarray):
+        val = np.array([val])
+    ind = np.argmin(np.abs(arr - val[..., None]), axis=1)
+    return ind.squeeze()
+
+
+def compute_resolution(obj):
+    variables = parse_params_file(obj)
+    log_variables = parse_log_file(obj)
+    N_x = log_variables["Number x zones"] * variables["nblockx"] * 2 ** variables["lrefine_max"]
+    N_y = log_variables["Number y zones"] * variables["nblocky"] * 2 ** variables["lrefine_max"]
+    N = N_x * N_y
+    return N, N_x, N_y
+
+
+def convert_to_eV(temp_C):
+    temp_kelvin = temp_C + 273.15
+    temp_eV = temp_kelvin * 8.617e-5
+    return temp_eV
 
 
 def compare_dicts(*dicts):
