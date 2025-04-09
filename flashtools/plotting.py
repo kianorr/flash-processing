@@ -1,9 +1,10 @@
 import matplotlib.pyplot as plt
+from matplotlib import patches
 import numpy as np
-from flashtools.utils import get_closest, parse_params_file
-from flashtools.compute import compute, data_index
 from scipy.ndimage import rotate
 import warnings
+from flashtools.utils import get_closest, load_time_series
+from flashtools.compute import compute, data_index
 
 
 def plot_1d(
@@ -202,7 +203,7 @@ def plot_2d(
         **kwargs,
     )
     if title:
-        ax.set_title(f"$t = {data[name]['time_ns']} ns$")
+        ax.set_title(f"$t = {np.round(data[name]['time_ns'], 3)}$ ns")
     ax.grid(False)
     ax.text(
         extent[0] + 0.01,
@@ -219,6 +220,55 @@ def plot_2d(
         cbar.set_label(f"{label} [{data_index[name]['units']}]", fontsize=15)
 
     if return_data:
-        return p, data_2d
+        return p, {"x": r[x_mask], "y": z[y_mask], "data": data_2d}
     else:
         return p
+
+
+def plot_amr_grid(ds, ax, refinement_filter, widths=None):
+    ymin = ds.domain_left_edge[1]
+    ymax = ds.domain_right_edge[1]
+
+    # if widths is None:
+    #     widths = np.linspace(7, 0.5, )
+    # widths = [7, 4, 2, 1, 0.1, 0.1]
+    # grid = ds.index.grids[0]
+    
+    for grid in ds.index.grids[:]:
+        if refinement_filter(grid.Level):
+            continue
+        # if grid.Level != refinement_level:
+        #     continue
+        left_edge = grid.LeftEdge
+        right_edge = grid.RightEdge
+        level = grid.Level
+
+        # print("dx =", grid.dds[0])
+        # print("dy =", grid.dds[1])
+        
+        
+        # Get x and y coordinates (slicing in the z-direction here)
+        x0 = left_edge[0]
+        x1 = right_edge[0]
+
+        y0_orig = left_edge[1]
+        y1_orig = right_edge[1]
+
+        # Flip y-coordinates of the grid
+        y0 = ymax - (y1_orig - ymin)
+        y1 = ymax - (y0_orig - ymin)
+        # print("dx =", x1 - x0)
+        # print("dy =", y1 - y0)
+        # print("dA =", (x1 - x0) * (y1 - y0))
+
+        # y0 = ymax - (y_orig - ymin) - dy
+        
+        # Draw a rectangle for each grid patch
+        rect = patches.Rectangle(
+            (x0, y0), x1 - x0, y1 - y0,
+            linewidth=widths[level],
+            edgecolor=f"C{level % 10}",  # Color by level
+            facecolor="none",
+            alpha=0.8
+        )
+        ax.add_patch(rect)
