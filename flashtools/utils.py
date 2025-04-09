@@ -129,6 +129,10 @@ def load_time_series(
     return ts
 
 
+def get_times(ts):
+    return [ds.current_time() for ds in ts]
+
+
 def load_ds(ts, time_ns=None, time_index=None):
     if time_ns is not None:
         ds = ts.get_by_time((time_ns * 1e-9, "s"))
@@ -202,13 +206,13 @@ def get_closest(arr, val):
     return ind.squeeze()
 
 
-def compute_resolution(obj):
+def compute_resolution(obj, print_res=False):
     variables = parse_params_file(obj)
     log_variables = parse_log_file(obj)
     N_x = log_variables["Number x zones"] * variables["nblockx"] * 2 ** variables["lrefine_max"]
     N_y = log_variables["Number y zones"] * variables["nblocky"] * 2 ** variables["lrefine_max"]
     N = N_x * N_y
-    return N, N_x, N_y
+    return N_x, N_y, N
 
 
 def convert_to_eV(temp_C):
@@ -225,7 +229,7 @@ def compare_dicts(*dicts):
         all_keys.update(d.keys())
 
     for key in all_keys:
-        values = {i: d.get(key.lower(), None) for i, d in enumerate(dicts)}
+        values = {i: d.get(key, None) for i, d in enumerate(dicts)}
         unique_values = set(values.values())
 
         if len(unique_values) > 1:
