@@ -1,4 +1,4 @@
-from flashtools.compute.data_index import data_index, register_compute_func
+from flashtools.compute.data_index import register_compute_func
 
 
 @register_compute_func(
@@ -14,6 +14,22 @@ def r_FLASH(data, data_yt, **kwargs):
 )
 def z_FLASH(data, data_yt, **kwargs):
     data["z_FLASH"] = {"data": data_yt["z"].value}
+    return data
+
+
+@register_compute_func(
+    name="x_FLASH", label="$x$", units="cm", cmap="plasma", data_deps=[]
+)
+def x_FLASH(data, data_yt, **kwargs):
+    data["x_FLASH"] = {"data": data_yt["x"].value}
+    return data
+
+
+@register_compute_func(
+    name="y_FLASH", label="$y$", units="cm", cmap="plasma", data_deps=[]
+)
+def y_FLASH(data, data_yt, **kwargs):
+    data["y_FLASH"] = {"data": data_yt["y"].value}
     return data
 
 
@@ -123,6 +139,7 @@ def trad(data, data_yt, **kwargs):
     units="cm/s",
     cmap="plasma",
     data_deps=[],
+    log=False
 )
 def velx(data, data_yt, **kwargs):
     data["velx"] = {"data": data_yt["velx"].value}
@@ -135,6 +152,7 @@ def velx(data, data_yt, **kwargs):
     units="cm/s",
     cmap="plasma",
     data_deps=[],
+    log=False,
 )
 def vely(data, data_yt, **kwargs):
     data["vely"] = {"data": data_yt["vely"].value}
@@ -198,3 +216,18 @@ def magz(data, data_yt, **kwargs):
 def magp(data, data_yt, **kwargs):
     data["magp"] = {"data": data_yt["magp"].value}
     return data
+
+# TODO: automatically register all FLASH vars that haven't been registered already manually
+def register_flash_var(name):
+    @register_compute_func(
+        name=name,
+        label=name,
+        units="???",
+        cmap="plasma",
+        data_deps=[],
+        divergent=False,
+        plot_log10=False,
+    )
+    def magp(data, data_yt, **kwargs):
+        data["magp"] = {"data": data_yt["magp"].value}
+        return data

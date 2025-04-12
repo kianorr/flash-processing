@@ -4,15 +4,45 @@ from .data_index import register_compute_func, data_index
 from flashtools.utils import convert_to_eV
 
 
-@register_compute_func(name="r", label="$r$", units="cm", data_deps=["r_FLASH"], coordinates="r")
+@register_compute_func(
+    name="r", label="$r$", units="cm", data_deps=["r_FLASH"], coordinates="r"
+)
 def r(data, data_yt, **kwargs):
     data["r"] = {"data": np.unique(data["r_FLASH"]["data"][:, :, 0])}
     return data
 
 
-@register_compute_func(name="z", label="$Z$", units="cm", data_deps=["z_FLASH"], coordinates="z")
+@register_compute_func(
+    name="z", label="$Z$", units="cm", data_deps=["z_FLASH"], coordinates="z"
+)
 def z(data, data_yt, **kwargs):
     data["z"] = {"data": np.unique(data["z_FLASH"]["data"][:, :, 0])}
+    return data
+
+
+@register_compute_func(
+    name="x",
+    label="$x$",
+    units="cm",
+    data_deps=["x_FLASH"],
+    coordinates="x",
+    basis="xyz",
+)
+def x(data, data_yt, **kwargs):
+    data["x"] = {"data": np.unique(data["x_FLASH"]["data"])}
+    return data
+
+
+@register_compute_func(
+    name="y",
+    label="$y$",
+    units="cm",
+    data_deps=["y_FLASH"],
+    coordinates="y",
+    basis="xyz",
+)
+def y(data, data_yt, **kwargs):
+    data["y"] = {"data": np.unique(data["y_FLASH"]["data"])}
     return data
 
 
@@ -309,12 +339,20 @@ def E_dens(data, data_yt, **kwargs):
 
 
 def integration_1d_helper(name, data):
-    z = data["z"]["data"]
-    r = data["r"]["data"]
+    z = data["z"]["data"].copy()
+    r = data["r"]["data"].copy()
     int_1d = np.zeros(len(z))
     for i, z_slice in enumerate(z):
         int_1d[i] = np.trapezoid(r * data[name]["data"][:, i, 0], r)
     return int_1d
+
+
+def integration_2d_helper(name, data):
+    z = data["z"]["data"].copy()
+    r = data["r"]["data"].copy()
+    int_1d = integration_1d_helper(name, data)
+    int_2d = np.trapezoid(int_1d, z)
+    return int_2d
 
 
 @register_compute_func(
@@ -327,10 +365,27 @@ def integration_1d_helper(name, data):
     divergent=False,
     plot_log10=False,
     coordinates="z",
+    coordinate_indices=[1]
 )
 def int_u_mag(data, data_yt, **kwargs):
     int_u_mag = integration_1d_helper("u_mag", data)
     data["int_u_mag"] = {"data": int_u_mag}
+    return data
+
+
+@register_compute_func(
+    name="int2d_u_mag",
+    label="$\int r$" + f"{data_index['u_mag']['label']}" + "d$r$d$z$",
+    units="ergs",
+    description="Volume integrated magnetic internal energy.",
+    data_deps=["u_mag", "r", "z"],
+    divergent=False,
+    plot_log10=False,
+    coordinates="",
+)
+def int2d_u_mag(data, data_yt, **kwargs):
+    int_u_mag = integration_2d_helper("u_mag", data)
+    data["int2d_u_mag"] = {"data": int_u_mag}
     return data
 
 

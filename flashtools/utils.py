@@ -14,7 +14,7 @@ def set_object_grandparent_dir(new_dir):
     if not os.path.exists(object_grandparent_dir):
         raise ValueError(f"Directory {new_dir} does not exist.")
 
-
+# TODO: make separate file for input/output functions
 def parse_file(
     obj=None,
     object_dir=None,
@@ -101,6 +101,9 @@ def find_path_to_object(object_dir=None, obj=None):
     obj_dir_info: tuple of (parent_directory, object_number)
     object_dir: path to object
     """
+    # TODO: do this instead
+    # if isinstance(object_id, int):
+    #     object_id = find_directory(object_grandparent_dir, object_id)
     if obj is not None:
         object_dir = find_directory(object_grandparent_dir, obj)
     if object_dir is None:
@@ -156,6 +159,7 @@ def load_2d_data(
     log_variables=None,
 ):
     object_dir = find_path_to_object(object_dir, obj)
+
     if ds is None:
         if ts is None:
             ts = load_time_series(object_dir=object_dir, output_dir=output_dir)

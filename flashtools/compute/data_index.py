@@ -14,7 +14,8 @@ def register_compute_func(
     plot_log10=True,
     cmap=None,
     data_plot_lims=None,
-    coordinates="rzp",
+    coordinates="rz",
+    coordinate_indices=[0, 1],
     basis="rzp",
     **kwargs
 ):
@@ -33,6 +34,7 @@ def register_compute_func(
             "data_plot_lims": data_plot_lims,
             "divergent": divergent,
             "coordinates": coordinates,
+            "coordinate_indices": coordinate_indices,
             "deps": deps,
             "basis": basis,
             "kwargs": kwargs,
@@ -60,13 +62,17 @@ def compute(
     obj, ts, data_yt, relate to a specific object. 
     ds, time_ns, time_ind refer to a specific time within that object
     """
+    # could do something where if multiple times are inputted then the dict structure
+    # would be data[time][name] and otherwise data[name]
     if ds is None:
         if ts is None:
             ts = load_time_series(obj, object_dir)
         ds = load_ds(ts, time_ns, time_ind)
 
+    # I think this should go above, because you only need ts if you don't have ds and you only need ds
+    # if you don't have data_yt
     if data_yt is None:
-        data_yt, __ = load_2d_data(obj, object_dir, time_ns=time_ns, time_index=time_ind, ts=ts, ds=ds)
+        data_yt, __ = load_2d_data(obj=obj, object_dir=object_dir, ds=ds)
     if data is None:
         data = {}
     if isinstance(names, str):

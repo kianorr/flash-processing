@@ -3,7 +3,7 @@ from matplotlib import patches
 import numpy as np
 from scipy.ndimage import rotate
 import warnings
-from flashtools.utils import get_closest, load_time_series
+from flashtools.utils import get_closest, load_time_series, parse_params_file
 from flashtools.compute import compute, data_index
 
 
@@ -16,7 +16,7 @@ def plot_1d(
     # yslice=None,
     # zslice=None,
     # or make slice_of a list
-    spatial_slice=None,
+    slice_of_value=None,
     slice_of=None,
     x_range=None,
     y_range=None,
@@ -27,23 +27,42 @@ def plot_1d(
     return_data=False,
     **kwargs,
 ):
-    """if z, slice should be with the target ending at zero."""
+    """Plot slice of 2d data or all of 1d data.
+    
+    Parameters
+    ----------
+    name: str
+        name of desired plot quantity.
+    data: dict
+        dictionary of data obtained from compute()
+    ax: matplotlib.axes.Axes
+        matplotlib axis object. ax will retain whatever is altered in this function.
+    """
     data_nd = data[name]["data"].squeeze()
-    coordinates = [data_index[name]["coordinates"][i] for i in range(data_nd.ndim)]
+    obj = data[name]["object_id"]
+    time = data[name]["time_ns"]
+    
+    variables = parse_params_file(obj)
+    if variables["geometry"] == "cylindrical":
+        basis = list("rzp")
+    elif variables["geometry"] == "cartesian":
+        basis = list("xyz")
+
+    coordinates = [basis[i] for i in data_index[name]["coordinate_indices"]]
     axis_ind_map = {coord: i for i, coord in enumerate(coordinates)}
 
-    if (spatial_slice is None or slice_of is None) and data[name]["data"].ndim > 1:
+    should_slice_data = np.all([slice_of_value, slice_of])
+    if (slice_of is None) != (slice_of_value is None):
+        raise ValueError("Both 'slice_of' and 'slice_of_value' must be provided together or not at all.")
+    if not should_slice_data and data_nd.ndim > 1:
         raise ValueError("Must provide a slice in r or z for 2D data.")
-    if data_nd.ndim == 1 and (spatial_slice is not None or slice_of is not None):
-        spatial_slice = None
-        slice_of = None
+    elif should_slice_data and data_nd.ndim == 1:
+        raise ValueError(f"Data is already 1D so {slice_of_value} and {slice_of} are not necessary.")
 
     allowed_kwargs = ["log"]
     for kwarg in kwargs:
         if kwarg not in allowed_kwargs:
             warnings.warn(f"Inputted kwarg {kwarg} not in known kwargs.")
-
-    obj = data[name]["object_id"]
     
     log = kwargs.pop("log", data_index[name]["log"])
     for coord in coordinates:
@@ -51,16 +70,8 @@ def plot_1d(
             obj_path = data[name]["object_path"]
             data = compute(coord, obj, object_dir=obj_path, data=data, time_ns=0)
 
-    # check this so we can reverse array in good conscious
-    z_spacing = np.diff(data["z"]["data"])
-    if not np.allclose(z_spacing, z_spacing[0], atol=1e-10):
-        raise NotImplementedError("z is not uniformly spaced.")
-
-    # reverse array in z (y in xyz?) because target is at the top in FLASH
-    axis_to_reverse = list(data_index[name]["basis"])[1]
-    data_nd = np.flip(data_nd, axis=axis_ind_map[axis_to_reverse])
-
     if conversion is not None:
+        assert "convert" in conversion and "units" in conversion
         data_nd = conversion["convert"](data_nd)
         data_units = conversion["units"]
     else:
@@ -68,20 +79,34 @@ def plot_1d(
     if log:
         data_nd = np.log10(data_nd)
 
-    # could maybe make this more general by popping keys in axis_ind_map
-    offset = lambda coord_name: (0 if coord_name == "r" else z_offset)
-    xaxis_name = "r" if slice_of == "z" else "z"
-    x_axis = data[xaxis_name]["data"] + offset(xaxis_name)
 
-    if spatial_slice is not None:
+    # reverse array in z (y in xyz) because target is at the top in FLASH
+    axis_to_reverse = basis[1]
+    if axis_to_reverse in axis_ind_map:
+        z_spacing = np.diff(data[axis_to_reverse]["data"])
+        if not np.allclose(z_spacing, z_spacing[0], atol=1e-10):
+            raise NotImplementedError("z is not uniformly spaced.")
+        data_nd = np.flip(data_nd, axis=axis_ind_map[axis_to_reverse])
+
+    offset = lambda coord_name: (0 if coord_name == basis[0] else z_offset)
+
+    if should_slice_data:
+        slice_of_index = axis_ind_map.pop(slice_of)
+
         spatial_slice_ind = get_closest(
-            data[slice_of]["data"] + offset(slice_of), spatial_slice
+            data[slice_of]["data"] + offset(slice_of), slice_of_value
         )
         s = [slice(None), slice(None)]
-        s[axis_ind_map[slice_of]] = slice(spatial_slice_ind, spatial_slice_ind + 1)
+        s[slice_of_index] = slice(spatial_slice_ind, spatial_slice_ind + 1)
         data_1d = data_nd[*s].squeeze()
+
     else:
         data_1d = data_nd.copy()
+
+    xaxis_name = axis_ind_map.popitem()[0]
+    assert not axis_ind_map
+    
+    x_axis = data[xaxis_name]["data"] + offset(xaxis_name)
 
     if x_range is None:
         x_range = [np.min(x_axis), np.max(x_axis)]
@@ -96,28 +121,30 @@ def plot_1d(
     ax.set_xlabel(f"{xaxis_name} [{data[xaxis_name]['units']}]", fontsize=15)
     ax.set_ylabel(f"{yaxis_label} [{data_units}]", fontsize=15)
     if title:
-        ax.set_title(
-            f"{slice_of} = {spatial_slice} {data_index[slice_of]['units']}", fontsize=15
-        )
+        t1 = f"t = {np.round(time, 3)} ns"
+        t2 = f" {slice_of} = {slice_of_value} {data_index[slice_of]['units']}" if should_slice_data else ""
+        t = t1 + t2
+        ax.set_title(t, fontsize=15)
     obj_text = f"(obj {obj})"
     label = label + rf" $^{{\text{{{obj_text}}}}}$"
     ax.plot(x_axis, data_1d, label=label, **kwargs)
 
     if return_data:
-        return {"x": x_axis, "y": data_1d.squeeze()}
+        return {"x_axis": x_axis, "y_axis": data_1d.squeeze()}
 
 
 def plot_2d(
     name,
     data,
     ax,
-    x_range=None,
-    y_range=None,
-    return_data=False,
-    extent=None,
-    z_offset=0,
-    cbar=False,
+    xaxis_range=None,
+    yaxis_range=None,
+    # TODO: generalize orientation? generalize coordinate system?
+    yaxis_offset=0,
     conversion=None,
+    return_data=False,
+    target_loc="bottom",
+    cbar=False,
     title=False,
     **kwargs,
 ):
@@ -131,8 +158,6 @@ def plot_2d(
         dictionary of data
     ax: matplotlib.axes.Axes
         axis to plot on
-    extent: list
-        [xmin, xmax, ymin, ymax]
     cbar: bool
         whether to include colorbar
     conversion: function
@@ -143,7 +168,12 @@ def plot_2d(
 
     data_2d = data[name]["data"].squeeze()
     obj = data[name]["object_id"]
-    coordinates = [data_index[name]["coordinates"][i] for i in range(data_2d.ndim)]
+    variables = parse_params_file(obj)
+    if variables["geometry"] == "cylindrical":
+        basis = list("rzp")
+    elif variables["geometry"] == "cartesian":
+        basis = list("xyz")
+    coordinates = [basis[i] for i in range(data_2d.ndim)]
 
 
     allowed_kwargs = ["data_plot_lims", "log"]
@@ -161,34 +191,39 @@ def plot_2d(
         if coord not in data:
             obj_path = data[name]["object_path"]
             data = compute(coord, obj, 0, obj_path, data=data)
-    z = data["z"]["data"].copy()
-    z += z_offset
-    r = data["r"]["data"].copy()
-    r = np.append(-r[::-1], r)
+    xaxis_name = coordinates[0]
+    yaxis_name = coordinates[1]
+    y_axis = data[yaxis_name]["data"].copy() + yaxis_offset
+    x_axis = data[xaxis_name]["data"].copy()
 
 
     if conversion is not None:
         data_2d = conversion(data_2d)
     data_2d = np.log10(data_2d) if log else data_2d
-    # TODO: make orientation more flexible
-    # rotate data so that target is at the bottom of the plot
+    # flip data so that target is at the bottom of the plot
     data_2d = data_2d.T
-    data_2d = data_2d[::-1]
-    # mainly for magnetic fields
-    reflected_data_sign = -1 if data[name]["divergent"] else 1
+    if target_loc == "bottom":
+        data_2d = data_2d[::-1]
+    elif target_loc == "left" or target_loc == "right":
+        raise NotImplementedError("left/right orientation not implented.")
+    
     # reflect data across r = 0 axis since data is axisymmetric
-    data_2d = np.append(reflected_data_sign * np.fliplr(data_2d), data_2d, axis=1)
+    if xaxis_name == "r":
+        x_axis = np.append(-x_axis[::-1], x_axis)
+        # mainly for magnetic fields
+        reflected_data_sign = -1 if data[name]["divergent"] else 1
+        data_2d = np.append(reflected_data_sign * np.fliplr(data_2d), data_2d, axis=1)
 
     # zoom in to part of the data
-    if x_range is None:
-        x_range = [np.min(r), np.max(r)]
-    if y_range is None:
-        y_range = [np.min(z), np.max(z)]
-    x_mask = (r >= x_range[0]) & (r <= x_range[1])
-    y_mask = (z >= y_range[0]) & (z <= y_range[1])
+    if xaxis_range is None:
+        xaxis_range = [np.min(x_axis), np.max(x_axis)]
+    if yaxis_range is None:
+        yaxis_range = [np.min(y_axis), np.max(y_axis)]
+    x_mask = (x_axis >= xaxis_range[0]) & (x_axis <= xaxis_range[1])
+    y_mask = (y_axis >= yaxis_range[0]) & (y_axis <= yaxis_range[1])
     data_2d = data_2d[np.ix_(y_mask, x_mask)]
 
-    extent = [*x_range, *y_range]
+    extent = [*xaxis_range, *yaxis_range]
 
     if data_plot_lims is None:
         data_plot_lims = [np.min(data_2d), np.max(data_2d)]
@@ -220,7 +255,7 @@ def plot_2d(
         cbar.set_label(f"{label} [{data_index[name]['units']}]", fontsize=15)
 
     if return_data:
-        return p, {"x": r[x_mask], "y": z[y_mask], "data": data_2d}
+        return p, {"x": x_axis[x_mask], "y": y_axis[y_mask], "data": data_2d}
     else:
         return p
 
@@ -234,18 +269,14 @@ def plot_amr_grid(ds, ax, refinement_filter, widths=None):
     # widths = [7, 4, 2, 1, 0.1, 0.1]
     # grid = ds.index.grids[0]
     
+    x_edges = []
     for grid in ds.index.grids[:]:
         if refinement_filter(grid.Level):
             continue
-        # if grid.Level != refinement_level:
-        #     continue
+
         left_edge = grid.LeftEdge
         right_edge = grid.RightEdge
         level = grid.Level
-
-        # print("dx =", grid.dds[0])
-        # print("dy =", grid.dds[1])
-        
         
         # Get x and y coordinates (slicing in the z-direction here)
         x0 = left_edge[0]
@@ -257,9 +288,6 @@ def plot_amr_grid(ds, ax, refinement_filter, widths=None):
         # Flip y-coordinates of the grid
         y0 = ymax - (y1_orig - ymin)
         y1 = ymax - (y0_orig - ymin)
-        # print("dx =", x1 - x0)
-        # print("dy =", y1 - y0)
-        # print("dA =", (x1 - x0) * (y1 - y0))
 
         # y0 = ymax - (y_orig - ymin) - dy
         
