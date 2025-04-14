@@ -1,4 +1,6 @@
-from flashtools.utils import load_2d_data, load_time_series, load_ds
+"""Compute inputted quantities via recursive function. Inspired by DESC."""
+
+from flashtools.utils import load_2d_data, load_time_series, load_ds, get_FLASH_basis
 
 
 data_index = {}
@@ -59,7 +61,7 @@ def compute(
     **kwargs
 ):
     """Have to give some form of an object and some form of a time.
-    obj, ts, data_yt, relate to a specific object. 
+    obj, ts, data_yt, relate to a specific object.
     ds, time_ns, time_ind refer to a specific time within that object
     """
     # could do something where if multiple times are inputted then the dict structure
@@ -94,9 +96,9 @@ def compute(
                 **kwargs
             )
 
-        # TODO: don't include these in data_index
-        data_index[name].update(object_id=obj, object_path=object_dir, time_ns=ds.current_time.value * 1e9)
-        data = data_index[name]["fun"](data, data_yt, **kwargs)
-        for key in data_index[name].keys():
-            data[name][key] = data_index[name][key]
+        basis = get_FLASH_basis(obj)
+        data = data_index[name]["fun"](data, data_yt, basis=basis, **kwargs)
+        data[name].update(
+            object_id=obj, object_path=object_dir, time_ns=ds.current_time.value * 1e9
+        )
     return data

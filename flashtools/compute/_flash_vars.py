@@ -1,9 +1,26 @@
 from flashtools.compute.data_index import register_compute_func
+from flashtools.utils import get_FLASH_basis
 
 
 @register_compute_func(
-    name="r_FLASH", label="$r$", units="cm", cmap="plasma", data_deps=[]
+    name="first_coord_FLASH", label="$x$ or $r$", units="cm", data_deps=[]
 )
+def first_coord_FLASH(data, data_yt, **kwargs):
+    basis = kwargs.pop("basis", "rzp")
+    data["first_coord_FLASH"] = {"data": data_yt[basis[0]].value}
+    return data
+
+
+@register_compute_func(
+    name="second_coord_FLASH", label="$x$ or $r$", units="cm", data_deps=[]
+)
+def second_coord_FLASH(data, data_yt, **kwargs):
+    basis = kwargs.pop("basis", "rzp")
+    data["second_coord_FLASH"] = {"data": data_yt[basis[1]].value}
+    return data
+
+
+@register_compute_func(name="r_FLASH", label="$r$", units="cm", data_deps=[])
 def r_FLASH(data, data_yt, **kwargs):
     data["r_FLASH"] = {"data": data_yt["r"].value}
     return data
@@ -42,6 +59,32 @@ def sumy(data, data_yt, **kwargs):
 @register_compute_func(name="ye", label="ye", units="~", cmap="plasma", data_deps=[])
 def ye(data, data_yt, **kwargs):
     data["ye"] = {"data": data_yt["ye"].value}
+    return data
+
+
+@register_compute_func(
+    name="targ",
+    label="target",
+    units="~",
+    cmap="plasma",
+    data_deps=[],
+    plot_log10=False,
+)
+def targ(data, data_yt, **kwargs):
+    data["targ"] = {"data": data_yt["targ"].value}
+    return data
+
+
+@register_compute_func(
+    name="cham",
+    label="chamber",
+    units="~",
+    cmap="plasma",
+    data_deps=[],
+    plot_log10=False,
+)
+def cham(data, data_yt, **kwargs):
+    data["cham"] = {"data": data_yt["cham"].value}
     return data
 
 
@@ -134,12 +177,7 @@ def trad(data, data_yt, **kwargs):
 
 
 @register_compute_func(
-    name="velx",
-    label="$v_x$",
-    units="cm/s",
-    cmap="plasma",
-    data_deps=[],
-    log=False
+    name="velx", label="$v_x$", units="cm/s", cmap="plasma", data_deps=[], log=False
 )
 def velx(data, data_yt, **kwargs):
     data["velx"] = {"data": data_yt["velx"].value}
@@ -216,6 +254,7 @@ def magz(data, data_yt, **kwargs):
 def magp(data, data_yt, **kwargs):
     data["magp"] = {"data": data_yt["magp"].value}
     return data
+
 
 # TODO: automatically register all FLASH vars that haven't been registered already manually
 def register_flash_var(name):

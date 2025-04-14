@@ -1,49 +1,7 @@
 import scipy
 import numpy as np
 from .data_index import register_compute_func, data_index
-from flashtools.utils import convert_to_eV
-
-
-@register_compute_func(
-    name="r", label="$r$", units="cm", data_deps=["r_FLASH"], coordinates="r"
-)
-def r(data, data_yt, **kwargs):
-    data["r"] = {"data": np.unique(data["r_FLASH"]["data"][:, :, 0])}
-    return data
-
-
-@register_compute_func(
-    name="z", label="$Z$", units="cm", data_deps=["z_FLASH"], coordinates="z"
-)
-def z(data, data_yt, **kwargs):
-    data["z"] = {"data": np.unique(data["z_FLASH"]["data"][:, :, 0])}
-    return data
-
-
-@register_compute_func(
-    name="x",
-    label="$x$",
-    units="cm",
-    data_deps=["x_FLASH"],
-    coordinates="x",
-    basis="xyz",
-)
-def x(data, data_yt, **kwargs):
-    data["x"] = {"data": np.unique(data["x_FLASH"]["data"])}
-    return data
-
-
-@register_compute_func(
-    name="y",
-    label="$y$",
-    units="cm",
-    data_deps=["y_FLASH"],
-    coordinates="y",
-    basis="xyz",
-)
-def y(data, data_yt, **kwargs):
-    data["y"] = {"data": np.unique(data["y_FLASH"]["data"])}
-    return data
+from flashtools.utils import convert_to_eV, get_FLASH_basis
 
 
 @register_compute_func(
@@ -218,6 +176,8 @@ def B_phi(data, data_yt, **kwargs):
     plot_log10=False,
 )
 def u_mag(data, data_yt, **kwargs):
+    # magnetic pressure in cgs is B^2 / 8pi
+    # where B = B_FLASH * sqrt(4pi)
     FLASH_factor = np.sqrt(4 * np.pi)
     data["u_mag"] = {"data": (data["magz"]["data"] * FLASH_factor) ** 2 / (8 * np.pi)}
     return data
@@ -294,17 +254,28 @@ def nion(data, data_yt, **kwargs):
     name="div_v",
     label=r"$\nabla \cdot v$",
     units="$1/$s",
-    data_deps=["r", "velx", "vely"],
+    data_deps=["first_coord", "second_coord", "velx", "vely"],
     cmap="plasma",
     data_plot_lims=[-1e10, 0.2e10],
     plot_log10=False,
+    coordinate_indices=[0, 1],
 )
 def div_v(data, data_yt, **kwargs):
-    r = data["r"]["data"]
-    dx = r[1] - r[0]
-    div_v = (1 / r) * np.gradient(r * data["velx"]["data"], dx, axis=0) + np.gradient(
-        data["vely"]["data"], dx, axis=1
+    basis = kwargs.pop("basis", "rzp")
+    first_coord = data["first_coord"]["data"]
+    second_coord = data["second_coord"]["data"]
+    geometric_factor = first_coord[..., None] if basis == "rzp" else 1
+
+    first_gradient = (
+        np.gradient(
+            geometric_factor * data["velx"]["data"].squeeze(), first_coord, axis=0
+        )
+        / geometric_factor
     )
+    second_gradient = np.gradient(data["vely"]["data"].squeeze(), second_coord, axis=1)
+
+    div_v = first_gradient + second_gradient
+
     data["div_v"] = {"data": div_v}
     return data
 
@@ -338,53 +309,55 @@ def E_dens(data, data_yt, **kwargs):
     return data
 
 
-def integration_1d_helper(name, data):
-    z = data["z"]["data"].copy()
-    r = data["r"]["data"].copy()
-    int_1d = np.zeros(len(z))
-    for i, z_slice in enumerate(z):
-        int_1d[i] = np.trapezoid(r * data[name]["data"][:, i, 0], r)
+def integration_1d_helper(first_coord, second_coord, input_data, basis):
+    geometric_factor = first_coord if basis == "rzp" else 1
+    int_1d = np.zeros(len(second_coord))
+    for i, z_slice in enumerate(second_coord):
+        int_1d[i] = np.trapezoid(geometric_factor * input_data[:, i, 0], first_coord)
     return int_1d
 
 
-def integration_2d_helper(name, data):
-    z = data["z"]["data"].copy()
-    r = data["r"]["data"].copy()
-    int_1d = integration_1d_helper(name, data)
-    int_2d = np.trapezoid(int_1d, z)
+def integration_2d_helper(first_coord, second_coord, input_data, basis):
+    int_1d = integration_1d_helper(first_coord, second_coord, input_data, basis)
+    int_2d = np.trapezoid(int_1d, second_coord)
     return int_2d
 
 
 @register_compute_func(
     name="int_u_mag",
-    label="$\int r$" + f"{data_index['u_mag']['label']}" + "d$r$",
+    label="$\int$" + f"{data_index['u_mag']['label']}" + "$d\ell$",
     units="ergs/cm",
-    description="Integrated internal magnetic energy along.",
+    description="Integrated internal magnetic energy over r along z.",
     cmap="plasma",
-    data_deps=["u_mag", "r", "z"],
+    data_deps=["first_coord", "second_coord", "u_mag"],
     divergent=False,
     plot_log10=False,
     coordinates="z",
-    coordinate_indices=[1]
+    coordinate_indices=[1],
 )
 def int_u_mag(data, data_yt, **kwargs):
-    int_u_mag = integration_1d_helper("u_mag", data)
+    basis = kwargs.pop("basis", "rzp")
+    inputs = [data[name]["data"] for name in ["first_coord", "second_coord", "u_mag"]]
+    int_u_mag = integration_1d_helper(*inputs, basis)
     data["int_u_mag"] = {"data": int_u_mag}
     return data
 
 
 @register_compute_func(
     name="int2d_u_mag",
-    label="$\int r$" + f"{data_index['u_mag']['label']}" + "d$r$d$z$",
+    label="$\int $" + f"{data_index['u_mag']['label']}" + "d$A$",
     units="ergs",
     description="Volume integrated magnetic internal energy.",
-    data_deps=["u_mag", "r", "z"],
+    data_deps=["first_coord", "second_coord", "u_mag"],
     divergent=False,
     plot_log10=False,
     coordinates="",
+    coordinate_indices=[],
 )
 def int2d_u_mag(data, data_yt, **kwargs):
-    int_u_mag = integration_2d_helper("u_mag", data)
+    basis = kwargs.pop("basis", "rzp")
+    inputs = [data[name]["data"] for name in ["first_coord", "second_coord", "u_mag"]]
+    int_u_mag = integration_2d_helper(*inputs, basis)
     data["int2d_u_mag"] = {"data": int_u_mag}
     return data
 
@@ -395,13 +368,16 @@ def int2d_u_mag(data, data_yt, **kwargs):
     units="cm$^{-1}$",
     description="Integrated electron density energy over r along z.",
     cmap="plasma",
-    data_deps=["nele", "r", "z"],
+    data_deps=["first_coord", "second_coord", "nele"],
     divergent=False,
     plot_log10=False,
     coordinates="z",
+    coordinate_indices=[1],
 )
 def int_nele(data, data_yt, **kwargs):
-    int_nele = integration_1d_helper("nele", data)
+    basis = kwargs.pop("basis", "rzp")
+    inputs = [data[name]["data"] for name in ["first_coord", "second_coord", "nele"]]
+    int_nele = integration_1d_helper(*inputs, basis)
     data["int_nele"] = {"data": int_nele}
     return data
 

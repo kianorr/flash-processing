@@ -3,7 +3,7 @@ from matplotlib import patches
 import numpy as np
 from scipy.ndimage import rotate
 import warnings
-from flashtools.utils import get_closest, load_time_series, parse_params_file
+from flashtools.utils import get_closest, parse_params_file, get_FLASH_basis
 from flashtools.compute import compute, data_index
 
 
@@ -28,7 +28,7 @@ def plot_1d(
     **kwargs,
 ):
     """Plot slice of 2d data or all of 1d data.
-    
+
     Parameters
     ----------
     name: str
@@ -41,29 +41,29 @@ def plot_1d(
     data_nd = data[name]["data"].squeeze()
     obj = data[name]["object_id"]
     time = data[name]["time_ns"]
-    
-    variables = parse_params_file(obj)
-    if variables["geometry"] == "cylindrical":
-        basis = list("rzp")
-    elif variables["geometry"] == "cartesian":
-        basis = list("xyz")
+
+    basis = list(get_FLASH_basis(obj))
 
     coordinates = [basis[i] for i in data_index[name]["coordinate_indices"]]
     axis_ind_map = {coord: i for i, coord in enumerate(coordinates)}
 
     should_slice_data = np.all([slice_of_value, slice_of])
     if (slice_of is None) != (slice_of_value is None):
-        raise ValueError("Both 'slice_of' and 'slice_of_value' must be provided together or not at all.")
+        raise ValueError(
+            "Both 'slice_of' and 'slice_of_value' must be provided together or not at all."
+        )
     if not should_slice_data and data_nd.ndim > 1:
         raise ValueError("Must provide a slice in r or z for 2D data.")
     elif should_slice_data and data_nd.ndim == 1:
-        raise ValueError(f"Data is already 1D so {slice_of_value} and {slice_of} are not necessary.")
+        raise ValueError(
+            f"Data is already 1D so {slice_of_value} and {slice_of} are not necessary."
+        )
 
     allowed_kwargs = ["log"]
     for kwarg in kwargs:
         if kwarg not in allowed_kwargs:
             warnings.warn(f"Inputted kwarg {kwarg} not in known kwargs.")
-    
+
     log = kwargs.pop("log", data_index[name]["log"])
     for coord in coordinates:
         if coord not in data:
@@ -78,7 +78,6 @@ def plot_1d(
         data_units = data_index[name]["units"]
     if log:
         data_nd = np.log10(data_nd)
-
 
     # reverse array in z (y in xyz) because target is at the top in FLASH
     axis_to_reverse = basis[1]
@@ -105,7 +104,7 @@ def plot_1d(
 
     xaxis_name = axis_ind_map.popitem()[0]
     assert not axis_ind_map
-    
+
     x_axis = data[xaxis_name]["data"] + offset(xaxis_name)
 
     if x_range is None:
@@ -117,12 +116,18 @@ def plot_1d(
     x_axis = x_axis[x_mask & y_mask]
     data_1d = data_1d[x_mask & y_mask]
 
-    yaxis_label = f"log({data[name]['label']})" if log else data[name]["label"]
-    ax.set_xlabel(f"{xaxis_name} [{data[xaxis_name]['units']}]", fontsize=15)
+    yaxis_label = (
+        f"log({data_index[name]['label']})" if log else data_index[name]["label"]
+    )
+    ax.set_xlabel(f"{xaxis_name} [{data_index[xaxis_name]['units']}]", fontsize=15)
     ax.set_ylabel(f"{yaxis_label} [{data_units}]", fontsize=15)
     if title:
         t1 = f"t = {np.round(time, 3)} ns"
-        t2 = f" {slice_of} = {slice_of_value} {data_index[slice_of]['units']}" if should_slice_data else ""
+        t2 = (
+            f" {slice_of} = {slice_of_value} {data_index[slice_of]['units']}"
+            if should_slice_data
+            else ""
+        )
         t = t1 + t2
         ax.set_title(t, fontsize=15)
     obj_text = f"(obj {obj})"
@@ -139,7 +144,6 @@ def plot_2d(
     ax,
     xaxis_range=None,
     yaxis_range=None,
-    # TODO: generalize orientation? generalize coordinate system?
     yaxis_offset=0,
     conversion=None,
     return_data=False,
@@ -168,24 +172,18 @@ def plot_2d(
 
     data_2d = data[name]["data"].squeeze()
     obj = data[name]["object_id"]
-    variables = parse_params_file(obj)
-    if variables["geometry"] == "cylindrical":
-        basis = list("rzp")
-    elif variables["geometry"] == "cartesian":
-        basis = list("xyz")
-    coordinates = [basis[i] for i in range(data_2d.ndim)]
-
+    basis = list(get_FLASH_basis(obj))
+    coordinates = [basis[i] for i in data_index[name]["coordinate_indices"]]
 
     allowed_kwargs = ["data_plot_lims", "log"]
     for kwarg in kwargs:
         if kwarg not in allowed_kwargs:
             warnings.warn(f"Inputted kwarg {kwarg} not in known kwargs.")
-    log = kwargs.pop("log", data[name]["log"])
+    log = kwargs.pop("log", data_index[name]["log"])
     data_plot_lims = kwargs.pop(
         "data_plot_lims",
-        data[name].get("data_plot_lims", None),
+        data_index[name].get("data_plot_lims", None),
     )
-
 
     for coord in coordinates:
         if coord not in data:
@@ -196,22 +194,22 @@ def plot_2d(
     y_axis = data[yaxis_name]["data"].copy() + yaxis_offset
     x_axis = data[xaxis_name]["data"].copy()
 
-
     if conversion is not None:
         data_2d = conversion(data_2d)
     data_2d = np.log10(data_2d) if log else data_2d
-    # flip data so that target is at the bottom of the plot
     data_2d = data_2d.T
+
+    assert target_loc in ["top", "bottom", "left", "right"]
     if target_loc == "bottom":
         data_2d = data_2d[::-1]
     elif target_loc == "left" or target_loc == "right":
         raise NotImplementedError("left/right orientation not implented.")
-    
+
     # reflect data across r = 0 axis since data is axisymmetric
     if xaxis_name == "r":
         x_axis = np.append(-x_axis[::-1], x_axis)
         # mainly for magnetic fields
-        reflected_data_sign = -1 if data[name]["divergent"] else 1
+        reflected_data_sign = -1 if data_index[name]["divergent"] else 1
         data_2d = np.append(reflected_data_sign * np.fliplr(data_2d), data_2d, axis=1)
 
     # zoom in to part of the data
@@ -221,6 +219,9 @@ def plot_2d(
         yaxis_range = [np.min(y_axis), np.max(y_axis)]
     x_mask = (x_axis >= xaxis_range[0]) & (x_axis <= xaxis_range[1])
     y_mask = (y_axis >= yaxis_range[0]) & (y_axis <= yaxis_range[1])
+
+    x_axis = x_axis[x_mask]
+    y_axis = y_axis[y_mask]
     data_2d = data_2d[np.ix_(y_mask, x_mask)]
 
     extent = [*xaxis_range, *yaxis_range]
@@ -251,16 +252,18 @@ def plot_2d(
     )
     if cbar:
         cbar = plt.gcf().colorbar(p, ax=ax)
-        label = f"log({data_index[name]['label']})" if log else data_index[name]["label"]
+        label = (
+            f"log({data_index[name]['label']})" if log else data_index[name]["label"]
+        )
         cbar.set_label(f"{label} [{data_index[name]['units']}]", fontsize=15)
 
     if return_data:
-        return p, {"x": x_axis[x_mask], "y": y_axis[y_mask], "data": data_2d}
+        return p, {"x": x_axis, "y": y_axis, "data": data_2d}
     else:
         return p
 
 
-def plot_amr_grid(ds, ax, refinement_filter, widths=None):
+def plot_amr_grid(ds, ax, refinement_filter, widths=None, target_loc="bottom"):
     ymin = ds.domain_left_edge[1]
     ymax = ds.domain_right_edge[1]
 
@@ -268,7 +271,7 @@ def plot_amr_grid(ds, ax, refinement_filter, widths=None):
     #     widths = np.linspace(7, 0.5, )
     # widths = [7, 4, 2, 1, 0.1, 0.1]
     # grid = ds.index.grids[0]
-    
+
     x_edges = []
     for grid in ds.index.grids[:]:
         if refinement_filter(grid.Level):
@@ -277,7 +280,7 @@ def plot_amr_grid(ds, ax, refinement_filter, widths=None):
         left_edge = grid.LeftEdge
         right_edge = grid.RightEdge
         level = grid.Level
-        
+
         # Get x and y coordinates (slicing in the z-direction here)
         x0 = left_edge[0]
         x1 = right_edge[0]
@@ -286,17 +289,20 @@ def plot_amr_grid(ds, ax, refinement_filter, widths=None):
         y1_orig = right_edge[1]
 
         # Flip y-coordinates of the grid
-        y0 = ymax - (y1_orig - ymin)
-        y1 = ymax - (y0_orig - ymin)
+        if target_loc == "bottom":
+            y0 = ymax - (y1_orig - ymin)
+            y1 = ymax - (y0_orig - ymin)
 
         # y0 = ymax - (y_orig - ymin) - dy
-        
+
         # Draw a rectangle for each grid patch
         rect = patches.Rectangle(
-            (x0, y0), x1 - x0, y1 - y0,
+            (x0, y0),
+            x1 - x0,
+            y1 - y0,
             linewidth=widths[level],
             edgecolor=f"C{level % 10}",  # Color by level
             facecolor="none",
-            alpha=0.8
+            alpha=0.8,
         )
         ax.add_patch(rect)

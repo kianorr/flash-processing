@@ -14,6 +14,7 @@ def set_object_grandparent_dir(new_dir):
     if not os.path.exists(object_grandparent_dir):
         raise ValueError(f"Directory {new_dir} does not exist.")
 
+
 # TODO: make separate file for input/output functions
 def parse_file(
     obj=None,
@@ -125,9 +126,7 @@ def load_time_series(
 ):
     object_dir = find_path_to_object(object_dir, obj)
     variables = parse_params_file(object_dir=object_dir)
-    hdf5_files = os.path.join(
-        output_dir, variables["basenm"] + f"hdf5_{plot_ext}_*"
-    )
+    hdf5_files = os.path.join(output_dir, variables["basenm"] + f"hdf5_{plot_ext}_*")
     ts = yt.load(os.path.join(object_dir, hdf5_files))
     return ts
 
@@ -143,9 +142,9 @@ def load_ds(ts, time_ns=None, time_index=None):
         ds = ts[time_index]
     else:
         raise ValueError("Must provide a time.")
-    
+
     return ds
-    
+
 
 def load_2d_data(
     obj=None,
@@ -165,13 +164,11 @@ def load_2d_data(
             ts = load_time_series(object_dir=object_dir, output_dir=output_dir)
         ds = load_ds(ts, time_ns, time_index)
 
-    
     # TODO: these are not time dependent so could be moved to a separate function
     if variables is None:
         variables = parse_params_file(object_dir=object_dir)
     if log_variables is None:
         log_variables = parse_log_file(object_dir=object_dir)
-    
 
     nbx = log_variables["Number x zones"]
     nby = log_variables["Number y zones"]
@@ -213,8 +210,16 @@ def get_closest(arr, val):
 def compute_resolution(obj, print_res=False):
     variables = parse_params_file(obj)
     log_variables = parse_log_file(obj)
-    N_x = log_variables["Number x zones"] * variables["nblockx"] * 2 ** variables["lrefine_max"]
-    N_y = log_variables["Number y zones"] * variables["nblocky"] * 2 ** variables["lrefine_max"]
+    N_x = (
+        log_variables["Number x zones"]
+        * variables["nblockx"]
+        * 2 ** variables["lrefine_max"]
+    )
+    N_y = (
+        log_variables["Number y zones"]
+        * variables["nblocky"]
+        * 2 ** variables["lrefine_max"]
+    )
     N = N_x * N_y
     return N_x, N_y, N
 
@@ -248,3 +253,12 @@ def compare_objects(*objs):
         params.append(parse_params_file(obj))
 
     return compare_dicts(*params)
+
+
+def get_FLASH_basis(obj):
+    variables = parse_params_file(obj)
+    if variables["geometry"] == "cartesian":
+        basis = "xyz"
+    elif variables["geometry"] == "cylindrical":
+        basis = "rzp"
+    return basis
