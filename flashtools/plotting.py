@@ -293,14 +293,13 @@ def plot_amr_grid(ds, ax, refinement_filter, widths=None, target_loc="bottom"):
         right_edge = grid.RightEdge
         level = grid.Level
 
-        # Get x and y coordinates (slicing in the z-direction here)
         x0 = left_edge[0]
         x1 = right_edge[0]
 
         y0_orig = left_edge[1]
         y1_orig = right_edge[1]
 
-        # Flip y-coordinates of the grid
+        # Flip second coordinate (z or y) of the grid
         if target_loc == "bottom":
             y0 = ymax - (y1_orig - ymin)
             y1 = ymax - (y0_orig - ymin)
