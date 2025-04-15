@@ -264,15 +264,27 @@ def plot_2d(
 
 
 def plot_amr_grid(ds, ax, refinement_filter, widths=None, target_loc="bottom"):
+    """Plot amr grid from flash.
+
+    ds: yt.frontends.flash.data_structures.FLASHDataset
+        yt dataset
+    ax: matplotlib.axes.Axes
+        ax to plot on
+    refinement_filter: func
+        e.g. `lambda level: level != 4` would only show refinement level 4.
+        the levels start at zero.
+    target_loc: str
+        location of target. Default "bottom" flips the grid. 
+        put anything else have it normal.
+    """
+
+
     ymin = ds.domain_left_edge[1]
     ymax = ds.domain_right_edge[1]
 
-    # if widths is None:
-    #     widths = np.linspace(7, 0.5, )
-    # widths = [7, 4, 2, 1, 0.1, 0.1]
-    # grid = ds.index.grids[0]
+    # TODO: make default widths
+    # TODO: add option for plotting nxb, nyb
 
-    x_edges = []
     for grid in ds.index.grids[:]:
         if refinement_filter(grid.Level):
             continue
@@ -293,15 +305,12 @@ def plot_amr_grid(ds, ax, refinement_filter, widths=None, target_loc="bottom"):
             y0 = ymax - (y1_orig - ymin)
             y1 = ymax - (y0_orig - ymin)
 
-        # y0 = ymax - (y_orig - ymin) - dy
-
-        # Draw a rectangle for each grid patch
         rect = patches.Rectangle(
             (x0, y0),
             x1 - x0,
             y1 - y0,
             linewidth=widths[level],
-            edgecolor=f"C{level % 10}",  # Color by level
+            edgecolor=f"C{level % 10}",
             facecolor="none",
             alpha=0.8,
         )
