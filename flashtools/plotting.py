@@ -150,6 +150,7 @@ def plot_2d(
     target_loc="bottom",
     cbar=False,
     title=False,
+    reflect_across_vertical=False,
     **kwargs,
 ):
     """Plots 2d data.
@@ -206,7 +207,7 @@ def plot_2d(
         raise NotImplementedError("left/right orientation not implented.")
 
     # reflect data across r = 0 axis since data is axisymmetric
-    if xaxis_name == "r":
+    if xaxis_name == "r" or reflect_across_vertical:
         x_axis = np.append(-x_axis[::-1], x_axis)
         # mainly for magnetic fields
         reflected_data_sign = -1 if data_index[name]["divergent"] else 1
