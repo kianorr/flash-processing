@@ -35,7 +35,7 @@ data = compute(keys, time_ns=2.5, object_dir="path/to/object/folder")
 print(f"electron density has dimensions (R, Z, Phi) = {np.shape(data['nele']['data'])}")
 
 plot_2d("nele", data, ax[0], cbar=True)
-plot_1d("E_dens", data, ax[1], slice_of="z", spatial_slice=0.1)
+plot_1d("E_dens", data, ax[1], slice_of="z", slice_of_value=0.1)
 
 fig.tight_layout()
 plt.show()
