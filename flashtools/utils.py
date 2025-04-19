@@ -230,15 +230,22 @@ def convert_to_eV(temp_C):
     return temp_eV
 
 
-def compare_dicts(*dicts):
+def compare_dicts(*dicts, dict_names=None, exclude=[]):
+    if isinstance(exclude, str):
+        exclude = [exclude]
     differences = {}
     all_keys = set()
+
+    if dict_names is None:
+        dict_names = [i for i in range(len(dicts))]
 
     for d in dicts:
         all_keys.update(d.keys())
 
     for key in all_keys:
-        values = {i: d.get(key, None) for i, d in enumerate(dicts)}
+        if key in exclude:
+            continue
+        values = {dict_name: d.get(key, None) for dict_name, d in zip(dict_names, dicts)}
         unique_values = set(values.values())
 
         if len(unique_values) > 1:
@@ -247,12 +254,14 @@ def compare_dicts(*dicts):
     return differences
 
 
-def compare_objects(*objs):
+def compare_objects(*objs, dict_names=None, exclude=[]):
     params = []
+    if dict_names is None:
+        dict_names = objs
     for obj in objs:
         params.append(parse_params_file(obj))
 
-    return compare_dicts(*params)
+    return compare_dicts(*params, dict_names=dict_names, exclude=exclude)
 
 
 def get_FLASH_basis(obj):
