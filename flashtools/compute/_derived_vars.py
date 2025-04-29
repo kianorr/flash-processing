@@ -344,7 +344,7 @@ def integration_1d_helper(first_coord, second_coord, input_data, basis):
     # int_1d = np.trapezoid(geometric_factor[..., None] * input_data[:, :, 0], first_coord, axis=0)
     int_1d = np.zeros(len(second_coord))
     for i, z_slice in enumerate(second_coord):
-        int_1d[i] = np.trapezoid(geometric_factor * input_data[:, i, 0], first_coord)
+        int_1d[i] = np.trapezoid(geometric_factor * input_data[:, i].squeeze(), first_coord)
     line_element = np.trapezoid(geometric_factor, first_coord)
     int_1d /= line_element
     return int_1d
@@ -388,7 +388,6 @@ def register_integrations(name):
         coordinates="z",
         coordinate_indices=[1]
     )
-    # function name might be tricky
     def int_(data, data_yt, **kwargs):
         basis = kwargs.pop("basis", "rzp")
         inputs = [data[name]["data"] for name in ["first_coord", "second_coord", name]]

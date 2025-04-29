@@ -6,6 +6,15 @@ import warnings
 from flashtools.utils import get_closest, parse_params_file, get_FLASH_basis
 from flashtools.compute import compute, data_index
 
+# TODO: add a function to process 1d data
+def _process_data():
+    """Would need to return data_units, """
+    pass
+
+
+def plot_space_time():
+    pass
+
 
 def plot_1d(
     name,
@@ -67,8 +76,7 @@ def plot_1d(
     log = kwargs.pop("log", data_index[name]["log"])
     for coord in coordinates:
         if coord not in data:
-            obj_path = data[name]["object_path"]
-            data = compute(coord, obj, object_dir=obj_path, data=data, time_ns=0)
+            data = compute(coord, obj, data=data, time_ns=0)
 
     if conversion is not None:
         assert "convert" in conversion and "units" in conversion
@@ -193,8 +201,7 @@ def plot_2d(
 
     for coord in coordinates:
         if coord not in data:
-            obj_path = data[name]["object_path"]
-            data = compute(coord, obj, 0, obj_path, data=data)
+            data = compute(coord, obj, 0, data=data)
     xaxis_name = coordinates[0]
     yaxis_name = coordinates[1]
     y_axis = data[yaxis_name]["data"].copy() + yaxis_offset
