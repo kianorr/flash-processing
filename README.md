@@ -31,7 +31,7 @@ print(f"the things you can compute are {list(data_index.keys())}")
 keys = ["nele", "E_dens"]
 
 # dictionary of data
-data = compute(keys, time_ns=2.5, object_dir="path/to/object/folder")
+data = compute(keys, "path/to/object/folder", time_ns=2.5)
 print(f"electron density has dimensions (R, Z, Phi) = {np.shape(data['nele']['data'])}")
 
 plot_2d("nele", data, ax[0], cbar=True)

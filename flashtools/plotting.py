@@ -264,7 +264,7 @@ def plot_2d(
     ax.text(
         extent[0] + 0.01,
         extent[2] + 0.01,
-        f"object {obj}",
+        f"object {obj}" if isinstance(obj, int) else "",
         ha="left",
         va="bottom",
         color="tab:blue",

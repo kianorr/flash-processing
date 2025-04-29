@@ -63,8 +63,8 @@ def compute(
     obj, ts, data_yt, relate to a specific object.
     ds, time_ns, time_ind refer to a specific time within that object
     """
-    # could do something where if multiple times are inputted then the dict structure
-    # would be data[time][name] and otherwise data[name]
+    # could have the dict structure be data[object_id][time_ns][name]
+    # or make each new object a class and do obj.compute(name, time_ns)
     if ds is None:
         if ts is None:
             ts = load_time_series(object_id)
