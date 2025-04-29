@@ -50,9 +50,8 @@ def register_compute_func(
 def compute(
     names,
     # TODO: add object_dir, output_dir
-    obj=None,
+    object_id,
     time_ns=None,
-    object_dir=None,
     time_ind=None,
     data_yt=None,
     ts=None,
@@ -68,13 +67,13 @@ def compute(
     # would be data[time][name] and otherwise data[name]
     if ds is None:
         if ts is None:
-            ts = load_time_series(obj, object_dir)
+            ts = load_time_series(object_id)
         ds = load_ds(ts, time_ns, time_ind)
 
     # I think this should go above, because you only need ts if you don't have ds and you only need ds
     # if you don't have data_yt
     if data_yt is None:
-        data_yt, __ = load_2d_data(obj=obj, object_dir=object_dir, ds=ds)
+        data_yt, __ = load_2d_data(object_id, ds=ds)
     if data is None:
         data = {}
     if isinstance(names, str):
@@ -85,8 +84,7 @@ def compute(
         if len(data_index[name]["deps"]["data"]):
             data = compute(
                 data_index[name]["deps"]["data"],
-                obj,
-                object_dir=object_dir,
+                object_id,
                 time_ns=time_ns,
                 time_ind=time_ind,
                 data_yt=data_yt,
@@ -96,9 +94,9 @@ def compute(
                 **kwargs
             )
 
-        basis = get_FLASH_basis(obj)
+        basis = get_FLASH_basis(object_id)
         data = data_index[name]["fun"](data, data_yt, basis=basis, **kwargs)
         data[name].update(
-            object_id=obj, object_path=object_dir, time_ns=ds.current_time.value * 1e9
+            object_id=object_id, time_ns=ds.current_time.value * 1e9
         )
     return data

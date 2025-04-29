@@ -1,7 +1,8 @@
 import scipy
 import numpy as np
+from copy import deepcopy
 from .data_index import register_compute_func, data_index
-from flashtools.utils import convert_to_eV, get_FLASH_basis
+from flashtools.utils import convert_to_eV
 
 
 @register_compute_func(
@@ -336,156 +337,31 @@ def beta_percent(data, data_yt, **kwargs):
     return data
 
 
+# TODO: find nice solution to integrating over z instead of r
 def integration_1d_helper(first_coord, second_coord, input_data, basis):
-    geometric_factor = first_coord if basis == "rzp" else 1
+    geometric_factor = first_coord if basis == "rzp" else np.ones(len(first_coord))
     # this also works
     # int_1d = np.trapezoid(geometric_factor[..., None] * input_data[:, :, 0], first_coord, axis=0)
     int_1d = np.zeros(len(second_coord))
     for i, z_slice in enumerate(second_coord):
-        int_1d[i] = np.trapezoid(geometric_factor * input_data[:, i, 0], first_coord)
+        int_1d[i] = np.trapezoid(geometric_factor * input_data[:, i].squeeze(), first_coord)
+    line_element = np.trapezoid(geometric_factor, first_coord)
+    int_1d /= line_element
     return int_1d
 
 
 def integration_2d_helper(first_coord, second_coord, input_data, basis):
     int_1d = integration_1d_helper(first_coord, second_coord, input_data, basis)
     int_2d = np.trapezoid(int_1d, second_coord)
+    line_element = (second_coord[-1] - second_coord[0])
+    int_2d /= line_element
     return int_2d
-
-
-@register_compute_func(
-    # TODO: fix units for cartesian
-    name="int_u_mag",
-    label="$\int$" + f"{data_index['u_mag']['label']}" + "$d\ell$",
-    units="ergs/cm",
-    # units=data_index["u_mag"]["units"] + "$d\ell$"
-    description="Integrated internal magnetic energy over r along z.",
-    cmap="plasma",
-    data_deps=["first_coord", "second_coord", "u_mag"],
-    divergent=False,
-    plot_log10=False,
-    coordinates="z",
-    coordinate_indices=[1],
-)
-def int_u_mag(data, data_yt, **kwargs):
-    basis = kwargs.pop("basis", "rzp")
-    inputs = [data[name]["data"] for name in ["first_coord", "second_coord", "u_mag"]]
-    int_u_mag = integration_1d_helper(*inputs, basis)
-    data["int_u_mag"] = {"data": int_u_mag}
-    return data
-
-
-@register_compute_func(
-    # TODO: fix units for cartesian
-    name="int_u_e",
-    label="$\int$" + f"{data_index['u_e']['label']}" + "$d\ell$",
-    units="ergs/cm",
-    # units=data_index["u_mag"]["units"] + "$d\ell$"
-    description="Integrated internal electron energy over r along z.",
-    cmap="plasma",
-    data_deps=["first_coord", "second_coord", "u_e"],
-    divergent=False,
-    plot_log10=False,
-    coordinates="z",
-    coordinate_indices=[1],
-)
-def int_u_e(data, data_yt, **kwargs):
-    basis = kwargs.pop("basis", "rzp")
-    inputs = [data[name]["data"] for name in ["first_coord", "second_coord", "u_e"]]
-    int_u_e = integration_1d_helper(*inputs, basis)
-    data["int_u_e"] = {"data": int_u_e}
-    return data
-
-
-@register_compute_func(
-    # TODO: fix units for cartesian
-    name="int_u_i",
-    label="$\int$" + f"{data_index['u_i']['label']}" + "$d\ell$",
-    units="ergs/cm",
-    # units=data_index["u_mag"]["units"] + "$d\ell$"
-    description="Integrated internal electron energy over r along z.",
-    cmap="plasma",
-    data_deps=["first_coord", "second_coord", "u_i"],
-    divergent=False,
-    plot_log10=False,
-    coordinates="z",
-    coordinate_indices=[1],
-)
-def int_u_i(data, data_yt, **kwargs):
-    basis = kwargs.pop("basis", "rzp")
-    inputs = [data[name]["data"] for name in ["first_coord", "second_coord", "u_i"]]
-    int_u_i = integration_1d_helper(*inputs, basis)
-    data["int_u_i"] = {"data": int_u_i}
-    return data
-
-
-@register_compute_func(
-    # TODO: fix units for cartesian
-    name="int_T_e",
-    label="$\int$" + f"{data_index['T_e']['label']}" + "$d\ell$",
-    units="eV $\cdot$ cm$^2$",
-    # units=data_index["u_mag"]["units"] + "$d\ell$"
-    description="Integrated T_e over r along z.",
-    cmap="plasma",
-    data_deps=["first_coord", "second_coord", "T_e"],
-    divergent=False,
-    plot_log10=False,
-    coordinates="z",
-    coordinate_indices=[1],
-)
-def int_T_e(data, data_yt, **kwargs):
-    basis = kwargs.pop("basis", "rzp")
-    inputs = [data[name]["data"] for name in ["first_coord", "second_coord", "T_e"]]
-    int_T_e = integration_1d_helper(*inputs, basis)
-    data["int_T_e"] = {"data": int_T_e}
-    return data
-
-
-@register_compute_func(
-    name="int_T_i",
-    label="$\int$" + f"{data_index['T_i']['label']}" + "$d\ell$",
-    units="eV $\cdot$ cm$^2$",
-    description="Integrated T_i over r along z.",
-    cmap="plasma",
-    data_deps=["first_coord", "second_coord", "T_i"],
-    divergent=False,
-    plot_log10=False,
-    coordinates="z",
-    coordinate_indices=[1],
-)
-def int_T_i(data, data_yt, **kwargs):
-    basis = kwargs.pop("basis", "rzp")
-    inputs = [data[name]["data"] for name in ["first_coord", "second_coord", "T_i"]]
-    int_T_i = integration_1d_helper(*inputs, basis)
-    data["int_T_i"] = {"data": int_T_i}
-    return data
-
-
-@register_compute_func(
-    # TODO: fix units for cartesian
-    name="int_vel_mag",
-    label="$\int$" + f"{data_index['vel_mag']['label']}" + "$d\ell$",
-    units="cm$^3$/s",
-    # units=data_index["u_mag"]["units"] + "$d\ell$"
-    description="Integrated flow velocity over r along z.",
-    cmap="plasma",
-    data_deps=["first_coord", "second_coord", "vel_mag"],
-    divergent=False,
-    plot_log10=False,
-    coordinates="z",
-    coordinate_indices=[1],
-)
-def int_vel_mag(data, data_yt, **kwargs):
-    basis = kwargs.pop("basis", "rzp")
-    inputs = [data[name]["data"] for name in ["first_coord", "second_coord", "vel_mag"]]
-    int_vel_mag = integration_1d_helper(*inputs, basis)
-    data["int_vel_mag"] = {"data": int_vel_mag}
-    return data
 
 
 @register_compute_func(
     name="int2d_u_mag",
     label="$\int $" + f"{data_index['u_mag']['label']}" + "d$A$",
-    units="ergs",
+    units=data_index["u_mag"]["units"],
     description="Volume integrated magnetic internal energy.",
     data_deps=["first_coord", "second_coord", "u_mag"],
     divergent=False,
@@ -501,61 +377,25 @@ def int2d_u_mag(data, data_yt, **kwargs):
     return data
 
 
-@register_compute_func(
-    name="int_plasma_beta",
-    label="$\int$" + f"{data_index['plasma_beta']['label']}" + "$d\ell$",
-    units="cm$^2$",
-    description="Integrated plasma beta over r along z.",
-    cmap="plasma",
-    data_deps=["first_coord", "second_coord", "plasma_beta"],
-    divergent=False,
-    plot_log10=False,
-    coordinates="z",
-    coordinate_indices=[1],
-)
-def int_plasma_beta(data, data_yt, **kwargs):
-    basis = kwargs.pop("basis", "rzp")
-    inputs = [data[name]["data"] for name in ["first_coord", "second_coord", "plasma_beta"]]
-    int_plasma_beta = integration_1d_helper(*inputs, basis)
-    data["int_plasma_beta"] = {"data": int_plasma_beta}
-    return data
-
-
-@register_compute_func(
-    name="int_nele",
-    label="$\int $" + f"{data_index['nele']['label']}" + "d$\ell$",
-    units="cm$^{-1}$",
-    description="Integrated electron density energy over r along z.",
-    cmap="plasma",
-    data_deps=["first_coord", "second_coord", "nele"],
-    divergent=False,
-    plot_log10=True,
-    coordinates="z",
-    coordinate_indices=[1],
-)
-def int_nele(data, data_yt, **kwargs):
-    basis = kwargs.pop("basis", "rzp")
-    inputs = [data[name]["data"] for name in ["first_coord", "second_coord", "nele"]]
-    int_nele = integration_1d_helper(*inputs, basis)
-    data["int_nele"] = {"data": int_nele}
-    return data
-
-
-# TODO: implement this with plasmapy units
 def register_integrations(name):
     @register_compute_func(
         name="int_" + name,
-        label="$\int r$" + f"{data_index[name]['label']}" + "d$r$",
-        units="cm$^-1$",
+        label="$\int $" + f"{data_index[name]['label']}" + "d$\ell$",
+        units=data_index[name]["units"],
         description=f"Integrated {name} over r along z.",
-        cmap="plasma",
-        data_deps=[name, "r", "z"],
-        divergent=False,
-        plot_log10=False,
+        data_deps=["first_coord", "second_coord", name],
+        plot_log10=data_index[name]["log"],
         coordinates="z",
+        coordinate_indices=[1]
     )
-    # function name might be tricky
-    def int_nele(data, data_yt, **kwargs):
-        int_name = integration_1d_helper("int_" + name, data)
-        data["int_" + name] = {"data": int_name}
+    def int_(data, data_yt, **kwargs):
+        basis = kwargs.pop("basis", "rzp")
+        inputs = [data[name]["data"] for name in ["first_coord", "second_coord", name]]
+        int_ = integration_1d_helper(*inputs, basis)
+        data["int_" + name] = {"data": int_}
         return data
+    
+di = deepcopy(data_index)
+for name in di:
+    if len(di[name]["coordinate_indices"]) == 2 and f"int_{name}" not in di:
+        register_integrations(name)

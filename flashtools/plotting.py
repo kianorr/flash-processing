@@ -6,6 +6,15 @@ import warnings
 from flashtools.utils import get_closest, parse_params_file, get_FLASH_basis
 from flashtools.compute import compute, data_index
 
+# TODO: add a function to process 1d data
+def _process_data():
+    """Would need to return data_units, """
+    pass
+
+
+def plot_space_time():
+    pass
+
 
 def plot_1d(
     name,
@@ -67,8 +76,7 @@ def plot_1d(
     log = kwargs.pop("log", data_index[name]["log"])
     for coord in coordinates:
         if coord not in data:
-            obj_path = data[name]["object_path"]
-            data = compute(coord, obj, object_dir=obj_path, data=data, time_ns=0)
+            data = compute(coord, obj, data=data, time_ns=0)
 
     if conversion is not None:
         assert "convert" in conversion and "units" in conversion
@@ -131,7 +139,7 @@ def plot_1d(
         t = t1 + t2
         ax.set_title(t, fontsize=15)
     obj_text = f"(obj {obj})"
-    label = label + rf" $^{{\text{{{obj_text}}}}}$"
+    label = str(label) + rf" $^{{\text{{{obj_text}}}}}$"
     ax.plot(x_axis, data_1d, label=label, **kwargs)
 
     if return_data:
@@ -150,6 +158,7 @@ def plot_2d(
     target_loc="bottom",
     cbar=False,
     title=False,
+    axislabels=False,
     reflect_across_vertical=False,
     **kwargs,
 ):
@@ -170,8 +179,12 @@ def plot_2d(
     kwargs: dict
         Allowed kwargs are log, data_plot_lims. The rest go to imshow.
     """
-
     data_2d = data[name]["data"].squeeze()
+    if data_2d.ndim == 1:
+        raise ValueError(f"Need data of 2 dimensions, got {data_2d.ndim}.")
+    elif data_2d.ndim > 2:
+        raise NotImplementedError("Data is more than 2 dimensions.")
+
     obj = data[name]["object_id"]
     basis = list(get_FLASH_basis(obj))
     coordinates = [basis[i] for i in data_index[name]["coordinate_indices"]]
@@ -188,15 +201,21 @@ def plot_2d(
 
     for coord in coordinates:
         if coord not in data:
-            obj_path = data[name]["object_path"]
-            data = compute(coord, obj, 0, obj_path, data=data)
+            data = compute(coord, obj, 0, data=data)
     xaxis_name = coordinates[0]
     yaxis_name = coordinates[1]
     y_axis = data[yaxis_name]["data"].copy() + yaxis_offset
     x_axis = data[xaxis_name]["data"].copy()
 
     if conversion is not None:
-        data_2d = conversion(data_2d)
+        assert (
+            "convert" in conversion and "units" in conversion,
+            "Need a dict with `convert` and `units` keys",
+        )
+        data_2d = conversion["convert"](data_2d)
+        data_units = conversion["units"]
+    else:
+        data_units = data_index[name]["units"]
     data_2d = np.log10(data_2d) if log else data_2d
     data_2d = data_2d.T
 
@@ -256,7 +275,10 @@ def plot_2d(
         label = (
             f"log({data_index[name]['label']})" if log else data_index[name]["label"]
         )
-        cbar.set_label(f"{label} [{data_index[name]['units']}]", fontsize=15)
+        cbar.set_label(f"{label} [{data_units}]", fontsize=15)
+    if axislabels:
+        ax.set_xlabel(f"{xaxis_name} [{data_index[xaxis_name]['units']}]", fontsize=15)
+        ax.set_ylabel(f"{yaxis_name} [{data_index[yaxis_name]['units']}]", fontsize=15)
 
     if return_data:
         return p, {"x": x_axis, "y": y_axis, "data": data_2d}
@@ -275,10 +297,9 @@ def plot_amr_grid(ds, ax, refinement_filter, widths=None, target_loc="bottom"):
         e.g. `lambda level: level != 4` would only show refinement level 4.
         the levels start at zero.
     target_loc: str
-        location of target. Default "bottom" flips the grid. 
+        location of target. Default "bottom" flips the grid.
         put anything else have it normal.
     """
-
 
     ymin = ds.domain_left_edge[1]
     ymax = ds.domain_right_edge[1]

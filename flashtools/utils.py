@@ -17,14 +17,13 @@ def set_object_grandparent_dir(new_dir):
 
 # TODO: make separate file for input/output functions
 def parse_file(
-    obj=None,
-    object_dir=None,
+    object_id,
     filename="flash.par",
     separator=None,
     break_func=None,
 ):
     variables = {}
-    object_dir = find_path_to_object(object_dir, obj)
+    object_dir = find_path_to_object(object_id)
     if separator is None:
         separator = ":" if ".log" in filename else "="
     filename = os.path.join(object_dir, filename)
@@ -52,15 +51,14 @@ def parse_file(
 
 
 def parse_log_file(
-    obj=None, object_dir=None, filename=None, separator=":", break_func=None
+    object_id, filename=None, separator=":", break_func=None
 ):
     if break_func is None:
         break_func = lambda x: "Comment" in x
     if filename is None:
-        filename = find_log_file(obj=obj, object_dir=object_dir)
+        filename = find_log_file(object_id)
     variables = parse_file(
-        obj=obj,
-        object_dir=object_dir,
+        object_id=object_id,
         filename=filename,
         separator=separator,
         break_func=break_func,
@@ -69,15 +67,13 @@ def parse_log_file(
 
 
 def parse_params_file(
-    obj=None,
-    object_dir=None,
+    object_id,
     filename="flash.par",
     separator="=",
     break_func=None,
 ):
     variables = parse_file(
-        obj=obj,
-        object_dir=object_dir,
+        object_id,
         filename=filename,
         separator=separator,
         break_func=break_func,
@@ -97,23 +93,25 @@ def find_directory(parent_directory, xxx):
     return directories
 
 
-def find_path_to_object(object_dir=None, obj=None):
+def find_path_to_object(object_id):
     """
     obj_dir_info: tuple of (parent_directory, object_number)
     object_dir: path to object
     """
     # TODO: do this instead
-    # if isinstance(object_id, int):
-    #     object_id = find_directory(object_grandparent_dir, object_id)
-    if obj is not None:
-        object_dir = find_directory(object_grandparent_dir, obj)
-    if object_dir is None:
-        raise ValueError("Must provide either an object number or a path to object.")
-    return object_dir
+    if isinstance(object_id, int):
+        object_id = find_directory(object_grandparent_dir, object_id)
+    elif not isinstance(object_id, str):
+        raise ValueError("`object_id` must be a path to the object (str) or number of the object (int).")
+    # if obj is not None:
+    #     object_dir = find_directory(object_grandparent_dir, obj)
+    # if object_dir is None:
+    #     raise ValueError("Must provide either an object number or a path to object.")
+    return object_id
 
 
-def find_log_file(obj=None, object_dir=None):
-    object_dir = find_path_to_object(object_dir, obj)
+def find_log_file(object_id):
+    object_dir = find_path_to_object(object_id)
     for path in os.listdir(object_dir):
         if ".log" in path:
             with open(os.path.join(object_dir, path), "r") as file:
@@ -122,17 +120,17 @@ def find_log_file(obj=None, object_dir=None):
 
 
 def load_time_series(
-    obj=None, object_dir=None, output_dir="output", plot_ext="plt_cnt"
+    object_id, output_dir="output", hdf5_extension="plt_cnt"
 ):
-    object_dir = find_path_to_object(object_dir, obj)
-    variables = parse_params_file(object_dir=object_dir)
-    hdf5_files = os.path.join(output_dir, variables["basenm"] + f"hdf5_{plot_ext}_*")
+    object_dir = find_path_to_object(object_id)
+    variables = parse_params_file(object_id)
+    hdf5_files = os.path.join(output_dir, variables["basenm"] + f"hdf5_{hdf5_extension}_*")
     ts = yt.load(os.path.join(object_dir, hdf5_files))
     return ts
 
 
 def get_times(ts):
-    return [ds.current_time() for ds in ts]
+    return [ds.current_time for ds in ts]
 
 
 def load_ds(ts, time_ns=None, time_index=None):
@@ -147,8 +145,7 @@ def load_ds(ts, time_ns=None, time_index=None):
 
 
 def load_2d_data(
-    obj=None,
-    object_dir=None,
+    object_id,
     ts=None,
     ds=None,
     time_ns=None,
@@ -157,18 +154,18 @@ def load_2d_data(
     variables=None,
     log_variables=None,
 ):
-    object_dir = find_path_to_object(object_dir, obj)
+    object_dir = find_path_to_object(object_id)
 
     if ds is None:
         if ts is None:
-            ts = load_time_series(object_dir=object_dir, output_dir=output_dir)
+            ts = load_time_series(object_id=object_dir, output_dir=output_dir)
         ds = load_ds(ts, time_ns, time_index)
 
     # TODO: these are not time dependent so could be moved to a separate function
     if variables is None:
-        variables = parse_params_file(object_dir=object_dir)
+        variables = parse_params_file(object_id=object_dir)
     if log_variables is None:
-        log_variables = parse_log_file(object_dir=object_dir)
+        log_variables = parse_log_file(object_id=object_dir)
 
     nbx = log_variables["Number x zones"]
     nby = log_variables["Number y zones"]
