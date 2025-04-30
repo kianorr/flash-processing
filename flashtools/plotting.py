@@ -208,9 +208,8 @@ def plot_2d(
     x_axis = data[xaxis_name]["data"].copy()
 
     if conversion is not None:
-        assert (
-            "convert" in conversion and "units" in conversion,
-            "Need a dict with `convert` and `units` keys",
+        assert "convert" in conversion and "units" in conversion, (
+            "Need a dict with `convert` and `units` keys"
         )
         data_2d = conversion["convert"](data_2d)
         data_units = conversion["units"]
