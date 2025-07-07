@@ -278,6 +278,44 @@ def compare_objects(*objs, dict_names=None, exclude=[]):
     return compare_dicts(*params, dict_names=dict_names, exclude=exclude)
 
 
+def query_files_with_params(filenames, query_params, match_all=True):
+    """Return files that contain all or any of the given variable–value pairs."""
+    matched_files = []
+
+    for fname in filenames:
+        try:
+            file_params = parse_file(fname.replace("flash.par", ""))
+        except Exception as e:
+            print(f"Error reading {fname}: {e}")
+            continue
+
+        matches = [
+            file_params.get(k) == v
+            for k, v in query_params.items()
+            if k in file_params
+        ]
+
+        if match_all and np.all(matches) and len(matches) == len(query_params):
+            matched_files.append(fname)
+        elif not match_all and any(matches):
+            matched_files.append(fname)
+
+    return matched_files
+
+
+def query_flashpar_files(query_params, match_all=True):
+    """Search for flash.par files that match the given variable–value pairs."""
+
+    # Find all flash.par files in the grandparent directory
+    pattern = os.path.join(object_grandparent_dir, "**", "**", "flash.par")
+    filenames = glob.glob(pattern)
+
+    # Filter files based on query parameters
+    matched_files = query_files_with_params(filenames, query_params, match_all)
+
+    return matched_files
+
+
 def get_FLASH_basis(obj):
     variables = parse_params_file(obj)
     if variables["geometry"] == "cartesian":
