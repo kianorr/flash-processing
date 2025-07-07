@@ -2,7 +2,7 @@ import scipy
 import numpy as np
 from copy import deepcopy
 from .data_index import register_compute_func, data_index
-from flashtools.utils import convert_to_eV
+from flashtools.utils import celsius_to_eV
 
 
 @register_compute_func(
@@ -193,7 +193,7 @@ def u_mag(data, data_yt, **kwargs):
     data_plot_lims=[0, 4],
 )
 def T_e(data, data_yt, **kwargs):
-    data["T_e"] = {"data": convert_to_eV(data["tele"]["data"])}
+    data["T_e"] = {"data": celsius_to_eV(data["tele"]["data"])}
     return data
 
 
@@ -203,9 +203,10 @@ def T_e(data, data_yt, **kwargs):
     units="eV",
     cmap="plasma",
     data_deps=["tion"],
+    data_plot_lims=[0, 4],
 )
 def T_i(data, data_yt, **kwargs):
-    data["T_i"] = {"data": convert_to_eV(data["tion"]["data"])}
+    data["T_i"] = {"data": celsius_to_eV(data["tion"]["data"])}
     return data
 
 
@@ -217,7 +218,7 @@ def T_i(data, data_yt, **kwargs):
     data_deps=["trad"],
 )
 def T_rad(data, data_yt, **kwargs):
-    data["T_rad"] = {"data": convert_to_eV(data["trad"]["data"])}
+    data["T_rad"] = {"data": celsius_to_eV(data["trad"]["data"])}
     return data
 
 
@@ -380,7 +381,8 @@ def int2d_u_mag(data, data_yt, **kwargs):
 def register_integrations(name):
     @register_compute_func(
         name="int_" + name,
-        label="$\int $" + f"{data_index[name]['label']}" + "d$\ell$",
+        label=rf"$\left< {(data_index[name]['label']).strip('$')} \right>_\ell$",
+        # label="$\int $" + f"{data_index[name]['label']}" + "d$\ell$",
         units=data_index[name]["units"],
         description=f"Integrated {name} over r along z.",
         data_deps=["first_coord", "second_coord", name],
