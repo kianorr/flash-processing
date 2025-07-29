@@ -99,15 +99,10 @@ def find_path_to_object(object_id):
     obj_dir_info: tuple of (parent_directory, object_number)
     object_dir: path to object
     """
-    # TODO: do this instead
     if isinstance(object_id, int):
         object_id = find_directory(object_grandparent_dir, object_id)
     elif not isinstance(object_id, str):
         raise ValueError("`object_id` must be a path to the object (str) or number of the object (int).")
-    # if obj is not None:
-    #     object_dir = find_directory(object_grandparent_dir, obj)
-    # if object_dir is None:
-    #     raise ValueError("Must provide either an object number or a path to object.")
     return object_id
 
 
@@ -130,8 +125,8 @@ def load_time_series(
     return ts
 
 
-def get_times(ts):
-    return [ds.current_time for ds in ts]
+def get_times_ns(ts):
+    return [ds.current_time.value * 1e9 for ds in ts]
 
 
 def load_ds(ts, time_ns=None, time_index=None):
@@ -170,13 +165,15 @@ def load_2d_data(
 
     nbx = log_variables["Number x zones"]
     nby = log_variables["Number y zones"]
+    nbz = log_variables["Number z zones"]
+    z_dim = nbz * variables["nblockz"] * 2 ** variables["lrefine_max"] if "nblockz" in variables else 1
     data_yt = ds.covering_grid(
         level=variables["lrefine_max"],
         left_edge=np.round(ds.index.grids[0].LeftEdge.value, 2),
         dims=[
             nbx * variables["nblockx"] * 2 ** variables["lrefine_max"],
             nby * variables["nblocky"] * 2 ** variables["lrefine_max"],
-            1,
+            z_dim,
         ],
     )
     # return ds so that it doesn't complain about being a weak reference

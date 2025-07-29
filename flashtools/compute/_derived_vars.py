@@ -338,6 +338,20 @@ def beta_percent(data, data_yt, **kwargs):
     return data
 
 
+@register_compute_func(
+    name="j_line",
+    label=f"j_line",
+    units="~",
+    data_deps=["T_e", "nele", "nion"],
+    cmap="plasma",
+    plot_log10=False,
+)
+def j_line(data, data_yt, **kwargs):
+    j_line = 10 ** -25 * data["nion"]["data"] * data["nele"]["data"] / (data["T_e"]["data"] ** (1 / 2)) * np.exp(-10 / data["T_e"]["data"])
+    data["j_line"] = {"data": j_line}
+    return data
+
+
 # TODO: find nice solution to integrating over z instead of r
 def integration_1d_helper(first_coord, second_coord, input_data, basis):
     geometric_factor = first_coord if basis == "rzp" else np.ones(len(first_coord))
