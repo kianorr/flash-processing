@@ -357,4 +357,13 @@ def plot_laser_profile(obj, ax):
     ax.set_xlabel("time [ns]", fontsize=12)
     ax.set_ylabel("power [W]", fontsize=12)
     ax.legend()
+    ax.text(
+        0.01,
+        0.01,
+        f"object {obj}" if isinstance(obj, int) else "",
+        ha="left",
+        va="bottom",
+        color="tab:blue",
+        fontsize=8,
+    )
     plt.tight_layout()
