@@ -114,7 +114,7 @@ def depo(data, data_yt, **kwargs):
     data["depo"] = {"data": data_yt["depo"].value}
     return data
 
-
+    
 @register_compute_func(
     name="dens",
     label=r"$\rho$",

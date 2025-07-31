@@ -6,15 +6,6 @@ import warnings
 from flashtools.utils import get_closest, parse_params_file, get_FLASH_basis
 from flashtools.compute import compute, data_index
 
-# TODO: add a function to process 1d data
-def _process_data():
-    """Would need to return data_units, """
-    pass
-
-
-def plot_space_time():
-    pass
-
 
 def plot_1d(
     name,
@@ -208,9 +199,9 @@ def plot_2d(
     x_axis = data[xaxis_name]["data"].copy()
 
     if conversion is not None:
-        assert "convert" in conversion and "units" in conversion, (
-            "Need a dict with `convert` and `units` keys"
-        )
+        assert (
+            "convert" in conversion and "units" in conversion
+        ), "Need a dict with `convert` and `units` keys"
         data_2d = conversion["convert"](data_2d)
         data_units = conversion["units"]
     else:
@@ -335,3 +326,35 @@ def plot_amr_grid(ds, ax, refinement_filter, widths=None, target_loc="bottom"):
             alpha=0.8,
         )
         ax.add_patch(rect)
+
+
+def plot_laser_profile(obj, ax):
+    variables = parse_params_file(obj)
+    n_pulses = variables["ed_numberOfPulses"]
+    n_beams = variables["ed_numberOfBeams"]
+    times = [
+        [variables[v] * 1e9 for v in variables if v.startswith(f"ed_time_{pulse}_")]
+        for pulse in range(1, n_pulses + 1)
+    ]
+    powers = [
+        [variables[v] for v in variables if v.startswith(f"ed_power_{pulse}_")]
+        for pulse in range(1, n_pulses + 1)
+    ]
+    beams_associated_with_pulses = {
+        pulse_number: [
+            beam
+            for beam in range(1, n_beams + 1)
+            if variables[f"ed_pulseNumber_{beam}"] == pulse_number
+        ]
+        for pulse_number in range(1, n_pulses + 1)
+    }
+    for pulse in range(n_pulses):
+        ax.plot(
+            times[pulse],
+            powers[pulse],
+            label=f"pulse {pulse+1}: {beams_associated_with_pulses[pulse+1]}",
+        )
+    ax.set_xlabel("time [ns]", fontsize=12)
+    ax.set_ylabel("power [W]", fontsize=12)
+    ax.legend()
+    plt.tight_layout()
