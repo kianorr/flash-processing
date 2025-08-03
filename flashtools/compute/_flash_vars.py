@@ -114,7 +114,7 @@ def depo(data, data_yt, **kwargs):
     data["depo"] = {"data": data_yt["depo"].value}
     return data
 
-    
+
 @register_compute_func(
     name="dens",
     label=r"$\rho$",
@@ -181,6 +181,14 @@ def trad(data, data_yt, **kwargs):
 )
 def velx(data, data_yt, **kwargs):
     data["velx"] = {"data": data_yt["velx"].value}
+    return data
+
+
+@register_compute_func(
+    name="velz", label="$v_z$", units="cm/s", cmap="plasma", data_deps=[], plot_log10=False
+)
+def velz(data, data_yt, **kwargs):
+    data["velz"] = {"data": data_yt["velz"].value}
     return data
 
 

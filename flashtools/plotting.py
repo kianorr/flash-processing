@@ -328,8 +328,10 @@ def plot_amr_grid(ds, ax, refinement_filter, widths=None, target_loc="bottom"):
         ax.add_patch(rect)
 
 
-def plot_laser_profile(obj, ax):
-    variables = parse_params_file(obj)
+def plot_laser_profile(object_id, ax=None):
+    if ax is None:
+        __, ax = plt.subplots(figsize=(8, 6))
+    variables = parse_params_file(object_id)
     n_pulses = variables["ed_numberOfPulses"]
     n_beams = variables["ed_numberOfBeams"]
     times = [
@@ -360,7 +362,7 @@ def plot_laser_profile(obj, ax):
     ax.text(
         0.01,
         0.01,
-        f"object {obj}" if isinstance(obj, int) else "",
+        f"object {object_id}" if isinstance(object_id, int) else "",
         ha="left",
         va="bottom",
         color="tab:blue",
