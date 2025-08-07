@@ -89,6 +89,19 @@ def cham(data, data_yt, **kwargs):
 
 
 @register_compute_func(
+    name="cros",
+    label="cross material",
+    units="~",
+    cmap="plasma",
+    data_deps=[],
+    plot_log10=False,
+)
+def cros(data, data_yt, **kwargs):
+    data["cros"] = {"data": data_yt["cros"].value}
+    return data
+
+
+@register_compute_func(
     name="shok",
     label="shocks",
     units="~",
