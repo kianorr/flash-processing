@@ -352,6 +352,20 @@ def j_line(data, data_yt, **kwargs):
     return data
 
 
+@register_compute_func(
+    name="sound_speed",
+    label="$c_s$",
+    units="cm/s",
+    data_deps=["P_tot", "dens"],
+    cmap="plasma",
+    plot_log10=False,
+)
+def sound_speed(data, data_yt, **kwargs):
+    c_s = np.sqrt(data["P_tot"]["data"] / data["dens"]["data"])
+    data["sound_speed"] = {"data": c_s}
+    return data
+
+
 # TODO: find nice solution to integrating over z instead of r
 def integration_1d_helper(first_coord, second_coord, input_data, basis):
     geometric_factor = first_coord if basis == "rzp" else np.ones(len(first_coord))
