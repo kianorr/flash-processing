@@ -299,6 +299,75 @@ def vel_mag(data, data_yt, **kwargs):
 
 
 @register_compute_func(
+    name="vorticity_x",
+    label=r"$v$",
+    units="cm$^2$/s",
+    data_deps=["velz", "vely", "second_coord", "third_coord"],
+    cmap="plasma",
+    # data_plot_lims=[0, 3500],
+    plot_log10=False,
+)
+def vorticity_x(data, data_yt, **kwargs):
+    vz = data["velz"]["data"]
+    vy = data["vely"]["data"]
+    second_coord = data["second_coord"]["data"]
+    third_coord = data["third_coord"]["data"]
+    data["vorticity_x"] = {"data": np.gradient(vz, second_coord, axis=1) - np.gradient(vy, third_coord, axis=2)}
+    return data
+
+
+@register_compute_func(
+    name="vorticity_y",
+    label=r"$v$",
+    units="cm$^2$/s",
+    data_deps=["velz", "velx", "first_coord", "third_coord"],
+    cmap="plasma",
+    # data_plot_lims=[0, 3500],
+    plot_log10=False,
+)
+def vorticity_y(data, data_yt, **kwargs):
+    vz = data["velz"]["data"]
+    vx = data["velx"]["data"]
+    first_coord = data["first_coord"]["data"]
+    third_coord = data["third_coord"]["data"]
+    data["vorticity_y"] = {"data": -(np.gradient(vz, first_coord, axis=0) - np.gradient(vx, third_coord, axis=2))}
+    return data
+
+
+@register_compute_func(
+    name="vorticity_z",
+    label=r"$v$",
+    units="cm$^2$/s",
+    data_deps=["vely", "velx", "first_coord", "second_coord"],
+    cmap="plasma",
+    # data_plot_lims=[0, 3500],
+    plot_log10=False,
+)
+def vorticity_z(data, data_yt, **kwargs):
+    vy = data["vely"]["data"]
+    vx = data["velx"]["data"]
+    first_coord = data["first_coord"]["data"]
+    second_coord = data["second_coord"]["data"]
+    data["vorticity_z"] = {"data": np.gradient(vy, first_coord, axis=0) - np.gradient(vx, second_coord, axis=1)}
+    return data
+
+
+@register_compute_func(
+    name="vorticity_mag",
+    label=r"$v$",
+    units="cm$^2$/s",
+    data_deps=["vorticity_x", "vorticity_y", "vorticity_z"],
+    cmap="plasma",
+    # data_plot_lims=[0, 3500],
+    plot_log10=False,
+)
+def vorticity_mag(data, data_yt, **kwargs):
+    v = np.sqrt(data["vorticity_x"]["data"] ** 2 + data["vorticity_y"]["data"] ** 2 + data["vorticity_z"]["data"] ** 2)
+    data["vorticity_mag"] = {"data": v}
+    return data
+
+
+@register_compute_func(
     name="E_dens",
     label="$ϵ$",
     units="ergs/cm$^3$",

@@ -36,6 +36,21 @@ def second_coord(data, data_yt, **kwargs):
 
 
 @register_compute_func(
+    name="third_coord",
+    label="$z$ or None",
+    units="cm",
+    data_deps=["third_coord_FLASH"],
+    coordinate_indices=[2],
+)
+def third_coord(data, data_yt, **kwargs):
+
+    data["third_coord"] = {
+        "data": np.unique(data["third_coord_FLASH"]["data"].squeeze())
+    }
+    return data
+
+
+@register_compute_func(
     name="r", label="$r$", units="cm", data_deps=["r_FLASH"], coordinates="r"
 )
 def r(data, data_yt, **kwargs):

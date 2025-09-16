@@ -274,6 +274,20 @@ def plot_2d(
         return p, {"x": x_axis, "y": y_axis, "data": data_2d}
     else:
         return p
+    
+
+def place_object_text(ax, obj):
+    xmin = ax.get_xlim()[0]
+    ymin = ax.get_ylim()[0]
+    ax.text(
+        xmin + (0.01 * xmin),
+        ymin + (0.01 * ymin),
+        f"object {obj}" if isinstance(obj, int) else "",
+        ha="left",
+        va="bottom",
+        color="tab:blue",
+        fontsize=8,
+    )
 
 
 def plot_amr_grid(ds, ax, refinement_filter, widths=None, target_loc="bottom"):
@@ -328,10 +342,13 @@ def plot_amr_grid(ds, ax, refinement_filter, widths=None, target_loc="bottom"):
         ax.add_patch(rect)
 
 
-def plot_laser_profile(object_id, ax=None):
+def plot_laser_profile(object_id, return_data=False, ax=None, beam_labels=None):
     if ax is None:
         __, ax = plt.subplots(figsize=(8, 6))
-    variables = parse_params_file(object_id)
+    if isinstance(object_id, int) or isinstance(object_id, str):
+        variables = parse_params_file(object_id)
+    elif isinstance(object_id, dict):
+        variables = object_id
     n_pulses = variables["ed_numberOfPulses"]
     n_beams = variables["ed_numberOfBeams"]
     times = [
@@ -342,7 +359,7 @@ def plot_laser_profile(object_id, ax=None):
         [variables[v] for v in variables if v.startswith(f"ed_power_{pulse}_")]
         for pulse in range(1, n_pulses + 1)
     ]
-    beams_associated_with_pulses = {
+    pulse_to_beams_map = {
         pulse_number: [
             beam
             for beam in range(1, n_beams + 1)
@@ -351,10 +368,11 @@ def plot_laser_profile(object_id, ax=None):
         for pulse_number in range(1, n_pulses + 1)
     }
     for pulse in range(n_pulses):
+        beam_label = pulse_to_beams_map[pulse+1] if not beam_labels else beam_labels[pulse]
         ax.plot(
             times[pulse],
             powers[pulse],
-            label=f"pulse {pulse+1}: {beams_associated_with_pulses[pulse+1]}",
+            label=f"pulse {pulse+1}: {beam_label}",
         )
     ax.set_xlabel("time [ns]", fontsize=12)
     ax.set_ylabel("power [W]", fontsize=12)
@@ -369,3 +387,5 @@ def plot_laser_profile(object_id, ax=None):
         fontsize=8,
     )
     plt.tight_layout()
+    if return_data:
+        return {"times": times, "powers": powers, "pulse_to_beams_map": pulse_to_beams_map}

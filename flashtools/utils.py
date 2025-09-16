@@ -125,7 +125,9 @@ def load_time_series(
     return ts
 
 
-def get_times_ns(ts):
+def get_times_ns(object_id=None, ts=None):
+    if ts is None:
+        ts = load_time_series(object_id)
     return [ds.current_time.value * 1e9 for ds in ts]
 
 

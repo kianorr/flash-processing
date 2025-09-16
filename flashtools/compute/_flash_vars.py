@@ -12,13 +12,20 @@ def first_coord_FLASH(data, data_yt, **kwargs):
 
 
 @register_compute_func(
-    name="second_coord_FLASH", label="$x$ or $r$", units="cm", data_deps=[]
+    name="second_coord_FLASH", label="$y$ or $z$", units="cm", data_deps=[]
 )
 def second_coord_FLASH(data, data_yt, **kwargs):
     basis = kwargs.pop("basis", "rzp")
     data["second_coord_FLASH"] = {"data": data_yt[basis[1]].value}
     return data
 
+@register_compute_func(
+    name="third_coord_FLASH", label="$z$ or None", units="cm", data_deps=[]
+)
+def second_coord_FLASH(data, data_yt, **kwargs):
+    basis = kwargs.pop("basis", "rzp")
+    data["third_coord_FLASH"] = {"data": data_yt[basis[2]].value}
+    return data
 
 @register_compute_func(name="r_FLASH", label="$r$", units="cm", data_deps=[])
 def r_FLASH(data, data_yt, **kwargs):

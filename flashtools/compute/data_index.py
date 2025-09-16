@@ -73,7 +73,8 @@ def compute(
     # I think this should go above, because you only need ts if you don't have ds and you only need ds
     # if you don't have data_yt
     if data_yt is None:
-        data_yt, __ = load_2d_data(object_id, ds=ds)
+        log_variables = kwargs.pop("log_variables", None)
+        data_yt, __ = load_2d_data(object_id, ds=ds, log_variables=log_variables)
     if data is None:
         data = {}
     if isinstance(names, str):
