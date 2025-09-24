@@ -118,6 +118,19 @@ def u_tot(data, data_yt, **kwargs):
     return data
 
 
+@register_compute_func(
+    name="kinetic_energy",
+    label=r"$E_{\text{kin}}$",
+    units="???",
+    cmap="plasma",
+    data_deps=["vel_mag"],
+    plot_log10=False,
+)
+def kinetic_energy(data, data_yt, **kwargs):
+    data["kinetic_energy"] = {"data": 0.5 * data["vel_mag"]["data"] ** 2}
+    return data
+
+
 # TODO: should have one compute quantity for B and have conversions for
 # rzp, xyz in the function
 @register_compute_func(
