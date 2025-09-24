@@ -284,6 +284,48 @@ def magp(data, data_yt, **kwargs):
     return data
 
 
+@register_compute_func(
+    name="eele",
+    label="eele",
+    units="???",
+    cmap="plasma",
+    data_deps=[],
+    divergent=False,
+    plot_log10=False,
+)
+def eele(data, data_yt, **kwargs):
+    data["eele"] = {"data": data_yt["eele"].value}
+    return data
+
+
+@register_compute_func(
+    name="eion",
+    label="eion",
+    units="???",
+    cmap="plasma",
+    data_deps=[],
+    divergent=False,
+    plot_log10=False,
+)
+def eion(data, data_yt, **kwargs):
+    data["eion"] = {"data": data_yt["eion"].value}
+    return data
+
+
+@register_compute_func(
+    name="eint",
+    label="eint",
+    units="???",
+    cmap="plasma",
+    data_deps=[],
+    divergent=False,
+    plot_log10=False,
+)
+def eint(data, data_yt, **kwargs):
+    data["eint"] = {"data": data_yt["eint"].value}
+    return data
+
+
 # TODO: automatically register all FLASH vars that haven't been registered already manually
 def register_flash_var(name):
     @register_compute_func(
