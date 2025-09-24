@@ -67,6 +67,19 @@ def P_tot(data, data_yt, **kwargs):
 
 
 @register_compute_func(
+    name="e_i",
+    label=r"$e_i$",
+    units="ergs",
+    cmap="plasma",
+    data_deps=["P_i"],
+    plot_log10=True,
+)
+def u_i(data, data_yt, **kwargs):
+    data["u_i"] = {"data": (3 / 2) * data["P_i"]["data"]}
+    return data
+
+
+@register_compute_func(
     name="u_i",
     label=r"$u_i$",
     units=data_index["P_i"]["units"],
@@ -467,6 +480,44 @@ def integration_2d_helper(first_coord, second_coord, input_data, basis):
     line_element = (second_coord[-1] - second_coord[0])
     int_2d /= line_element
     return int_2d
+
+
+@register_compute_func(
+    name="int2d_eint",
+    label="$\int $" + f"{data_index['eint']['label']}" + "d$A$",
+    units=data_index["eint"]["units"],
+    description="Volume integrated magnetic internal energy.",
+    data_deps=["first_coord", "second_coord", "eint"],
+    divergent=False,
+    plot_log10=False,
+    coordinates="",
+    coordinate_indices=[],
+)
+def int2d_eint(data, data_yt, **kwargs):
+    basis = kwargs.pop("basis", "rzp")
+    inputs = [data[name]["data"] for name in ["first_coord", "second_coord", "eint"]]
+    int_eint = integration_2d_helper(*inputs, basis)
+    data["int2d_eint"] = {"data": int_eint}
+    return data
+
+
+@register_compute_func(
+    name="int2d_kinetic_energy",
+    label="$\int $" + f"{data_index['kinetic_energy']['label']}" + "d$A$",
+    units=data_index["kinetic_energy"]["units"],
+    description="Volume integrated kinetic energy.",
+    data_deps=["first_coord", "second_coord", "kinetic_energy"],
+    divergent=False,
+    plot_log10=False,
+    coordinates="",
+    coordinate_indices=[],
+)
+def int2d_kinetic_energy(data, data_yt, **kwargs):
+    basis = kwargs.pop("basis", "rzp")
+    inputs = [data[name]["data"] for name in ["first_coord", "second_coord", "kinetic_energy"]]
+    int_kinetic_energy = integration_2d_helper(*inputs, basis)
+    data["int2d_kinetic_energy"] = {"data": int_kinetic_energy}
+    return data
 
 
 @register_compute_func(

@@ -287,7 +287,7 @@ def magp(data, data_yt, **kwargs):
 @register_compute_func(
     name="eele",
     label="eele",
-    units="???",
+    units="ergs/g",
     cmap="plasma",
     data_deps=[],
     divergent=False,
@@ -301,7 +301,7 @@ def eele(data, data_yt, **kwargs):
 @register_compute_func(
     name="eion",
     label="eion",
-    units="???",
+    units="ergs/g",
     cmap="plasma",
     data_deps=[],
     divergent=False,
@@ -313,9 +313,28 @@ def eion(data, data_yt, **kwargs):
 
 
 @register_compute_func(
+    name="erad",
+    label="erad",
+    units="ergs/g",
+    cmap="plasma",
+    data_deps=[],
+    divergent=False,
+    plot_log10=False,
+)
+def erad(data, data_yt, **kwargs):
+    data["erad"] = {"data": data_yt["erad"].value}
+    return data
+
+
+def eion(data, data_yt, **kwargs):
+    data["eion"] = {"data": data_yt["eion"].value}
+    return data
+
+
+@register_compute_func(
     name="eint",
     label="eint",
-    units="???",
+    units="ergs/g",
     cmap="plasma",
     data_deps=[],
     divergent=False,
