@@ -326,8 +326,17 @@ def erad(data, data_yt, **kwargs):
     return data
 
 
-def eion(data, data_yt, **kwargs):
-    data["eion"] = {"data": data_yt["eion"].value}
+@register_compute_func(
+    name="cond",
+    label="cond",
+    units="???",
+    cmap="plasma",
+    data_deps=[],
+    divergent=False,
+    plot_log10=False,
+)
+def cond(data, data_yt, **kwargs):
+    data["cond"] = {"data": data_yt["cond"].value}
     return data
 
 

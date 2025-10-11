@@ -6,6 +6,19 @@ from flashtools.utils import celsius_to_eV
 
 
 @register_compute_func(
+    name="Z_bar",
+    label=r"$Z_\text{bar}$",
+    units=r"~",
+    cmap="plasma",
+    data_deps=["sumy", "ye"],
+    plot_log10=False,
+)
+def Z_bar(data, data_yt, **kwargs):
+    data["Z_bar"] = {"data": data["ye"]["data"] / data["sumy"]["data"]}
+    return data
+
+
+@register_compute_func(
     name="P_e",
     label=r"$P_\text{e}$",
     units=r"$\text{ergs}/\text{cm}^3$",

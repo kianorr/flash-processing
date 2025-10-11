@@ -1,9 +1,10 @@
 import matplotlib.pyplot as plt
 from matplotlib import patches
+from matplotlib.animation import FuncAnimation
 import numpy as np
 from scipy.ndimage import rotate
 import warnings
-from flashtools.utils import get_closest, parse_params_file, get_FLASH_basis
+from flashtools.utils import get_closest, load_time_series, parse_params_file, get_FLASH_basis
 from flashtools.compute import compute, data_index
 
 
@@ -86,11 +87,14 @@ def plot_1d(
             raise NotImplementedError("z is not uniformly spaced.")
         data_nd = np.flip(data_nd, axis=axis_ind_map[axis_to_reverse])
 
+    # No offset if axis is r
     offset = lambda coord_name: (0 if coord_name == basis[0] else z_offset)
 
     if should_slice_data:
         slice_of_index = axis_ind_map.pop(slice_of)
 
+        # take slice after applying offset and reversing z axis ...
+        # should probably use distance from target
         spatial_slice_ind = get_closest(
             data[slice_of]["data"] + offset(slice_of), slice_of_value
         )
@@ -238,12 +242,14 @@ def plot_2d(
 
     if data_plot_lims is None:
         data_plot_lims = [np.min(data_2d), np.max(data_2d)]
+    
+    cmap = kwargs.pop("cmap", data_index[name]["cmap"])
 
     p = ax.imshow(
         data_2d,
         extent=extent,
         origin="lower",
-        cmap=data_index[name]["cmap"],
+        cmap=cmap,
         vmin=data_plot_lims[0],
         vmax=data_plot_lims[1],
         **kwargs,
@@ -274,6 +280,73 @@ def plot_2d(
         return p, {"x": x_axis, "y": y_axis, "data": data_2d}
     else:
         return p
+    
+
+def animate_2d(
+    name,
+    data,
+    ax,
+    xaxis_range=None,
+    yaxis_range=None,
+    yaxis_offset=0,
+    conversion=None,
+    target_loc="bottom",
+    cbar=True,
+    title=False,
+    axislabels=False,
+    reflect_across_vertical=False,
+    **kwargs,
+):
+    # colorbar
+    obj = data[0][name]["object_id"]
+    fig = plt.gcf()
+    print(kwargs)
+    if cbar:
+        # log = kwargs.get("log", data_index[name]["log"])
+        # data_plot_lims = kwargs.get(
+        #     "data_plot_lims",
+        #     data_index[name].get("data_plot_lims", None),
+        # )
+        ds = load_time_series(obj)[0]
+        dummy_data = compute([name, "z"], obj, ds=ds)
+        p = plot_2d(
+            name,
+            dummy_data,
+            ax,
+            cbar=True
+            **kwargs
+            # data_plot_lims=data_plot_lims, 
+            # log=log
+        )
+        # cbar = plt.gcf().colorbar(p, ax=ax)
+        # label = (
+        #     f"log({data_index[name]['label']})" if log else data_index[name]["label"]
+        # )
+        # units = data_index[name]["units"]
+        # cbar.set_label(f"{label} [{units}]", fontsize=15)
+    print(kwargs)
+    def animate(i):
+        ax.clear()
+        plot_2d(
+            name,
+            data[i],
+            ax,
+            xaxis_range=xaxis_range,
+            yaxis_range=yaxis_range,
+            yaxis_offset=yaxis_offset,
+            conversion=conversion,
+            return_data=False,
+            target_loc=target_loc,
+            cbar=False,
+            title=title,
+            axislabels=axislabels,
+            reflect_across_vertical=reflect_across_vertical,
+            **kwargs,
+        )
+
+    ani = FuncAnimation(fig, animate, frames=len(data), interval=50)
+    ani.save(f"obj_{obj}_{name}test.mp4", writer="ffmpeg", dpi=300, bitrate=5000)
+
     
 
 def place_object_text(ax, obj):
@@ -309,7 +382,7 @@ def plot_amr_grid(ds, ax, refinement_filter, widths=None, target_loc="bottom"):
     ymax = ds.domain_right_edge[1]
 
     # TODO: make default widths
-    # TODO: add option for plotting nxb, nyb
+    # TODO: add option for plotting nbx, nby
 
     for grid in ds.index.grids[:]:
         if refinement_filter(grid.Level):
@@ -342,7 +415,7 @@ def plot_amr_grid(ds, ax, refinement_filter, widths=None, target_loc="bottom"):
         ax.add_patch(rect)
 
 
-def plot_laser_profile(object_id, return_data=False, ax=None, beam_labels=None):
+def plot_laser_profile(object_id, ax=None, return_data=False, beam_labels=None, **kwargs):
     if ax is None:
         __, ax = plt.subplots(figsize=(8, 6))
     if isinstance(object_id, int) or isinstance(object_id, str):
@@ -369,10 +442,12 @@ def plot_laser_profile(object_id, return_data=False, ax=None, beam_labels=None):
     }
     for pulse in range(n_pulses):
         beam_label = pulse_to_beams_map[pulse+1] if not beam_labels else beam_labels[pulse]
+        label = kwargs.get("label", f"pulse {pulse+1}: {beam_label}")
         ax.plot(
             times[pulse],
             powers[pulse],
-            label=f"pulse {pulse+1}: {beam_label}",
+            label=label,
+            **kwargs,
         )
     ax.set_xlabel("time [ns]", fontsize=12)
     ax.set_ylabel("power [W]", fontsize=12)
