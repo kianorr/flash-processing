@@ -82,8 +82,8 @@ def parse_params_file(
     return variables
 
 
-def find_directory(parent_directory, xxx):
-    pattern = f"{parent_directory}/**/object_{xxx}___*"
+def find_directory(parent_directory, xxx, init_str="object_{xxx}___*"):
+    pattern = f"{parent_directory}/**/{init_str.format(xxx=xxx)}"
     matches = glob.glob(pattern)
     directories = [d for d in matches if os.path.isdir(d)]
     if len(directories):

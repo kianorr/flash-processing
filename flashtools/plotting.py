@@ -154,6 +154,7 @@ def plot_2d(
     cbar=False,
     title=False,
     axislabels=False,
+    object_text=True,
     reflect_across_vertical=False,
     **kwargs,
 ):
@@ -245,6 +246,8 @@ def plot_2d(
     
     cmap = kwargs.pop("cmap", data_index[name]["cmap"])
 
+    data_2d = np.nan_to_num(data_2d, nan=0.0)
+
     p = ax.imshow(
         data_2d,
         extent=extent,
@@ -257,15 +260,16 @@ def plot_2d(
     if title:
         ax.set_title(f"$t = {np.round(data[name]['time_ns'], 3)}$ ns")
     ax.grid(False)
-    ax.text(
-        extent[0] + 0.01,
-        extent[2] + 0.01,
-        f"object {obj}" if isinstance(obj, int) else "",
-        ha="left",
-        va="bottom",
-        color="tab:blue",
-        fontsize=8,
-    )
+    if object_text:
+        ax.text(
+            extent[0] + 0.01,
+            extent[2] + 0.01,
+            f"object {obj}" if isinstance(obj, int) else "",
+            ha="left",
+            va="bottom",
+            color="tab:blue",
+            fontsize=8,
+        )
     if cbar:
         cbar = plt.gcf().colorbar(p, ax=ax)
         label = (
@@ -349,13 +353,14 @@ def animate_2d(
 
     
 
-def place_object_text(ax, obj):
+def place_object_text(ax, obj, text=""):
     xmin = ax.get_xlim()[0]
     ymin = ax.get_ylim()[0]
+    obj_text = f"object {obj}" if isinstance(obj, int) else ""
     ax.text(
         xmin + (0.01 * xmin),
         ymin + (0.01 * ymin),
-        f"object {obj}" if isinstance(obj, int) else "",
+        obj_text + text,
         ha="left",
         va="bottom",
         color="tab:blue",

@@ -197,7 +197,7 @@ def trad(data, data_yt, **kwargs):
 
 
 @register_compute_func(
-    name="velx", label="$v_x$", units="cm/s", cmap="plasma", data_deps=[], plot_log10=False
+    name="velx", label="$v_x$", units="cm/s", cmap="RdBu", data_deps=[], plot_log10=False, data_plot_lims=[-1e6, 1e6]
 )
 def velx(data, data_yt, **kwargs):
     data["velx"] = {"data": data_yt["velx"].value}

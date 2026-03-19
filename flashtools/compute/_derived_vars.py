@@ -47,6 +47,20 @@ def P_i(data, data_yt, **kwargs):
     return data
 
 
+
+@register_compute_func(
+    name="T_rad",
+    label=r"$T_\text{rad}$",
+    units=r"$\text{eV}$",
+    cmap="plasma",
+    data_deps=["trad"],
+    plot_log10=True,
+)
+def T_rad(data, data_yt, **kwargs):
+    data["T_rad"] = {"data": celsius_to_eV(data["trad"]["data"])}
+    return data
+
+
 @register_compute_func(
     name="P_rad",
     label=r"$P_\text{rad}$",
@@ -292,6 +306,22 @@ def nion(data, data_yt, **kwargs):
 
 
 @register_compute_func(
+    name="j_ff",
+    label="$j_{ff}$",
+    units="W/eV/cm$^3$",
+    data_deps=["Z_bar", "nion", "nele", "T_e"],
+    cmap="Greys",
+    plot_log10=False,
+)
+def j_ff(data, data_yt, **kwargs):
+    data_index["j_ff"]["label"] = rf"$j_{{ff}}(\varepsilon={kwargs['photon_energy']} \text{{ eV}})$"
+    data["j_ff"] = {
+        "data": 2 * 10**-32 * data["Z_bar"]["data"]**2 * data["nele"]["data"]*data["nion"]["data"] * np.exp(-kwargs["photon_energy"] / data["T_e"]["data"]) / np.sqrt(data["T_e"]["data"])
+    }
+    return data
+
+
+@register_compute_func(
     name="div_v",
     label=r"$\nabla \cdot v$",
     units="$1/$s",
@@ -322,7 +352,7 @@ def div_v(data, data_yt, **kwargs):
 
 
 @register_compute_func(
-    name="vel_mag",
+    name="|vel|",
     label=r"$v$",
     units="cm/s",
     data_deps=["velx", "vely"],
@@ -333,7 +363,39 @@ def div_v(data, data_yt, **kwargs):
 def vel_mag(data, data_yt, **kwargs):
     vx = data["velx"]["data"]
     vy = data["vely"]["data"]
-    data["vel_mag"] = {"data": np.sqrt(vx**2 + vy**2)}
+    data["|vel|"] = {"data": np.sqrt(vx**2 + vy**2)}
+    return data
+
+
+@register_compute_func(
+    name="|vel_planar|",
+    label="$\\sqrt{v_x^2 + v_z^2}$",
+    units="cm/s",
+    data_deps=["velx", "velz"],
+    cmap="plasma",
+    # data_plot_lims=[0, 3500],
+    plot_log10=False,
+)
+def vel_planar(data, data_yt, **kwargs):
+    vx = data["velx"]["data"]
+    vz = data["velz"]["data"]
+    data["|vel_planar|"] = {"data": np.sqrt(vx**2 + vz**2)}
+    return data
+
+
+@register_compute_func(
+    name="|mag_planar|",
+    label="$\\sqrt{B_x^2 + B_z^2}$",
+    units="cm/s",
+    data_deps=["magx", "magz"],
+    cmap="plasma",
+    # data_plot_lims=[0, 3500],
+    plot_log10=False,
+)
+def mag_planar(data, data_yt, **kwargs):
+    bx = data["magx"]["data"]
+    bz = data["magz"]["data"]
+    data["|mag_planar|"] = {"data": np.sqrt(bx**2 + bz**2)}
     return data
 
 
@@ -393,7 +455,7 @@ def vorticity_z(data, data_yt, **kwargs):
 
 @register_compute_func(
     name="vorticity_mag",
-    label=r"$v$",
+    label=r"$\omega$",
     units="cm$^2$/s",
     data_deps=["vorticity_x", "vorticity_y", "vorticity_z"],
     cmap="plasma",
@@ -403,6 +465,33 @@ def vorticity_z(data, data_yt, **kwargs):
 def vorticity_mag(data, data_yt, **kwargs):
     v = np.sqrt(data["vorticity_x"]["data"] ** 2 + data["vorticity_y"]["data"] ** 2 + data["vorticity_z"]["data"] ** 2)
     data["vorticity_mag"] = {"data": v}
+    return data
+
+
+@register_compute_func(
+    name="helicity",
+    label=r"$H$",
+    units="cm$^2$/s",
+    data_deps=["velx", "vely", "velz", "vorticity_x", "vorticity_y", "vorticity_z"],
+    cmap="plasma",
+    # data_plot_lims=[0, 3500],
+    plot_log10=False,
+)
+def helicity(data, data_yt, **kwargs):
+    # u = np.array([data["velx"]["data"], data["vely"]["data"], data["velz"]["data"]])
+    # w = np.array([data["vorticity_x"]["data"], data["vorticity_y"]["data"], data["vorticity_z"]["data"]])
+    # u_dot_w = np.dot(u, w)
+    u_dot_w = data["velx"]["data"] * data["vorticity_x"]["data"] + data["vely"]["data"] * data["vorticity_y"]["data"] + data["velz"]["data"] * data["vorticity_z"]["data"]
+    # H = scipy.integrate.tplquad(
+    #     u_dot_w, 
+    #     data["first_coord"]["data"][0], 
+    #     data["first_coord"]["data"][-1], 
+    #     lambda x: data["second_coord"]["data"][0], 
+    #     lambda x: data["second_coord"]["data"][-1], 
+    #     lambda x, y: data["third_coord"]["data"][0], 
+    #     lambda x, y: data["third_coord"]["data"][-1]
+    # )[0]
+    data["helicity"] = {"data": u_dot_w}
     return data
 
 
