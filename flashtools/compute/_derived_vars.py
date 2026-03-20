@@ -495,7 +495,10 @@ def helicity(data, data_yt, **kwargs):
     dx = data["first_coord"]["data"][1] - data["first_coord"]["data"][0]
     dy = data["second_coord"]["data"][1] - data["second_coord"]["data"][0]
     dz = data["third_coord"]["data"][1] - data["third_coord"]["data"][0]
-    total_helicity = np.sum(u_dot_w) * dx * dy * dz
+    integral_x = np.trapezoid(u_dot_w, dx=dx, axis=0)
+    integral_y = np.trapezoid(integral_x, dx=dy, axis=0)
+    total_helicity = np.trapezoid(integral_y, dx=dz, axis=0)
+    # total_helicity = np.sum(u_dot_w) * (dx * dy * dz)
     data["helicity"] = {"data": total_helicity}
     return data
 
