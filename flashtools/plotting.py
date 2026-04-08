@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from matplotlib import patches
+from matplotlib import legend, patches
 from matplotlib.animation import FuncAnimation
 import numpy as np
 from scipy.ndimage import rotate
@@ -420,7 +420,7 @@ def plot_amr_grid(ds, ax, refinement_filter, widths=None, target_loc="bottom"):
         ax.add_patch(rect)
 
 
-def plot_laser_profile(object_id, ax=None, return_data=False, beam_labels=None, **kwargs):
+def plot_laser_profile(object_id, ax=None, return_data=False, beam_labels=None, colors=None, obj_text=True, show_legend=True, **kwargs):
     if ax is None:
         __, ax = plt.subplots(figsize=(8, 6))
     if isinstance(object_id, int) or isinstance(object_id, str):
@@ -448,24 +448,28 @@ def plot_laser_profile(object_id, ax=None, return_data=False, beam_labels=None, 
     for pulse in range(n_pulses):
         beam_label = pulse_to_beams_map[pulse+1] if not beam_labels else beam_labels[pulse]
         label = kwargs.get("label", f"pulse {pulse+1}: {beam_label}")
+        color = kwargs.get("color", f"C{pulse % 10}" if not colors else colors[pulse])
         ax.plot(
             times[pulse],
             powers[pulse],
             label=label,
+            color=color,
             **kwargs,
         )
     ax.set_xlabel("time [ns]", fontsize=12)
     ax.set_ylabel("power [W]", fontsize=12)
-    ax.legend()
-    ax.text(
-        0.01,
-        0.01,
-        f"object {object_id}" if isinstance(object_id, int) else "",
-        ha="left",
-        va="bottom",
-        color="tab:blue",
-        fontsize=8,
-    )
+    if show_legend:
+        ax.legend()
+    if obj_text:
+        ax.text(
+            0.01,
+            0.01,
+            f"object {object_id}" if isinstance(object_id, int) else obj_text,
+            ha="left",
+            va="bottom",
+            color="tab:blue",
+            fontsize=8,
+        )
     plt.tight_layout()
     if return_data:
         return {"times": times, "powers": powers, "pulse_to_beams_map": pulse_to_beams_map}

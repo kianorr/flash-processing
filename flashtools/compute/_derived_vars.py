@@ -469,36 +469,42 @@ def vorticity_mag(data, data_yt, **kwargs):
 
 
 @register_compute_func(
+    name="helicity_integrand",
+    label=r"$u \cdot \omega$",
+    units="s$^{-2}$",
+    data_deps=["velx", "vely", "velz", "vorticity_x", "vorticity_y", "vorticity_z"],
+    cmap="plasma",
+    # data_plot_lims=[0, 3500],
+    plot_log10=False,
+)
+def helicity_integrand(data, data_yt, **kwargs):
+    u_dot_w = (
+        data["velx"]["data"] * data["vorticity_x"]["data"] + 
+        data["vely"]["data"] * data["vorticity_y"]["data"] + 
+        data["velz"]["data"] * data["vorticity_z"]["data"]
+    )
+    data["helicity_integrand"] = {"data": u_dot_w}
+    return data
+
+
+@register_compute_func(
     name="helicity",
     label=r"$H$",
-    units="cm$^2$/s",
-    data_deps=["velx", "vely", "velz", "vorticity_x", "vorticity_y", "vorticity_z", "first_coord", "second_coord", "third_coord"],
+    units="cm$^3$/s",
+    data_deps=["helicity_integrand", "first_coord", "second_coord", "third_coord"],
     cmap="plasma",
     # data_plot_lims=[0, 3500],
     plot_log10=False,
 )
 def helicity(data, data_yt, **kwargs):
-    # u = np.array([data["velx"]["data"], data["vely"]["data"], data["velz"]["data"]])
-    # w = np.array([data["vorticity_x"]["data"], data["vorticity_y"]["data"], data["vorticity_z"]["data"]])
-    # u_dot_w = np.dot(u, w)
-    # u_dot_w = data["velx"]["data"] * data["vorticity_x"]["data"] + data["vely"]["data"] * data["vorticity_y"]["data"] + data["velz"]["data"] * data["vorticity_z"]["data"]
-    u_dot_w = data["velx"]["data"] * data["vorticity_x"]["data"] + data["vely"]["data"] * data["vorticity_y"]["data"] + data["velz"]["data"] * data["vorticity_z"]["data"]
-    # H = scipy.integrate.tplquad(
-    #     u_dot_w, 
-    #     data["first_coord"]["data"][0], 
-    #     data["first_coord"]["data"][-1],
-    #     data["second_coord"]["data"][0], 
-    #     data["second_coord"]["data"][-1], 
-    #     data["third_coord"]["data"][0], 
-    #     data["third_coord"]["data"][-1]
-    # )[0]
+    u_dot_w = data["helicity_integrand"]["data"]
+    
     dx = data["first_coord"]["data"][1] - data["first_coord"]["data"][0]
     dy = data["second_coord"]["data"][1] - data["second_coord"]["data"][0]
     dz = data["third_coord"]["data"][1] - data["third_coord"]["data"][0]
     integral_x = np.trapezoid(u_dot_w, dx=dx, axis=0)
     integral_y = np.trapezoid(integral_x, dx=dy, axis=0)
     total_helicity = np.trapezoid(integral_y, dx=dz, axis=0)
-    # total_helicity = np.sum(u_dot_w) * (dx * dy * dz)
     data["helicity"] = {"data": total_helicity}
     return data
 
