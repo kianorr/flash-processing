@@ -332,6 +332,7 @@ def j_ff(data, data_yt, **kwargs):
     coordinate_indices=[0, 1],
 )
 def div_v(data, data_yt, **kwargs):
+    # TODO: 3d
     basis = kwargs.pop("basis", "rzp")
     first_coord = data["first_coord"]["data"]
     second_coord = data["second_coord"]["data"]
@@ -352,10 +353,10 @@ def div_v(data, data_yt, **kwargs):
 
 
 @register_compute_func(
-    name="|vel|",
+    name="vel_mag",
     label=r"$v$",
     units="cm/s",
-    data_deps=["velx", "vely"],
+    data_deps=["velx", "vely", "velz"],
     cmap="plasma",
     # data_plot_lims=[0, 3500],
     plot_log10=False,
@@ -363,7 +364,8 @@ def div_v(data, data_yt, **kwargs):
 def vel_mag(data, data_yt, **kwargs):
     vx = data["velx"]["data"]
     vy = data["vely"]["data"]
-    data["|vel|"] = {"data": np.sqrt(vx**2 + vy**2)}
+    vz = data["velz"]["data"]
+    data["vel_mag"] = {"data": np.sqrt(vx**2 + vy**2 + vz**2)}
     return data
 
 
@@ -510,6 +512,29 @@ def helicity(data, data_yt, **kwargs):
 
 
 @register_compute_func(
+    name="helicity_normalized",
+    label=r"$\frac{H}{H_{\text{aligned}}}$",
+    units="~",
+    data_deps=["helicity", "vorticity_mag", "vel_mag", "first_coord", "second_coord", "third_coord"],
+    cmap="plasma",
+    plot_log10=False,
+)
+def helicity_normalized(data, data_yt, **kwargs):    
+    dx = data["first_coord"]["data"][1] - data["first_coord"]["data"][0]
+    dy = data["second_coord"]["data"][1] - data["second_coord"]["data"][0]
+    dz = data["third_coord"]["data"][1] - data["third_coord"]["data"][0]
+
+    # max possible helicity
+    u_times_w = data["vel_mag"]["data"] * data["vorticity_mag"]["data"]
+    integral_x = np.trapezoid(u_times_w, dx=dx, axis=0)
+    integral_y = np.trapezoid(integral_x, dx=dy, axis=0)
+    helicity_aligned = np.trapezoid(integral_y, dx=dz, axis=0)
+
+    data["helicity_normalized"] = {"data": data["helicity"]["data"] / helicity_aligned}
+    return data
+
+
+@register_compute_func(
     name="E_dens",
     label="$ϵ$",
     units="ergs/cm$^3$",
@@ -572,8 +597,22 @@ def j_line(data, data_yt, **kwargs):
     plot_log10=False,
 )
 def sound_speed(data, data_yt, **kwargs):
-    c_s = np.sqrt(data["P_tot"]["data"] / data["dens"]["data"])
+    c_s = np.sqrt((5 / 3) * data["P_tot"]["data"] / data["dens"]["data"])
     data["sound_speed"] = {"data": c_s}
+    return data
+
+
+@register_compute_func(
+    name="mach_number",
+    label="$M$",
+    units="~",
+    data_deps=["vel_mag", "sound_speed"],
+    cmap="plasma",
+    plot_log10=False,
+)
+def mach_number(data, data_yt, **kwargs):
+    M = data["vel_mag"]["data"] / data["sound_speed"]["data"]
+    data["mach_number"] = {"data": M}
     return data
 
 
