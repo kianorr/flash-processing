@@ -325,7 +325,7 @@ def j_ff(data, data_yt, **kwargs):
     name="div_v",
     label=r"$\nabla \cdot v$",
     units="$1/$s",
-    data_deps=["first_coord", "second_coord", "velx", "vely"],
+    data_deps=["first_coord", "second_coord", "third_coord", "velx", "vely", "velz"],
     cmap="plasma",
     data_plot_lims=[-1e10, 0.2e10],
     plot_log10=False,
@@ -336,17 +336,24 @@ def div_v(data, data_yt, **kwargs):
     basis = kwargs.pop("basis", "rzp")
     first_coord = data["first_coord"]["data"]
     second_coord = data["second_coord"]["data"]
+    third_coord = data["third_coord"]["data"]
     geometric_factor = first_coord[..., None] if basis == "rzp" else 1
 
     first_gradient = (
         np.gradient(
-            geometric_factor * data["velx"]["data"].squeeze(), first_coord, axis=0
+            geometric_factor * data["velx"]["data"], first_coord, axis=0
         )
         / geometric_factor
     )
-    second_gradient = np.gradient(data["vely"]["data"].squeeze(), second_coord, axis=1)
+    second_gradient = np.gradient(data["vely"]["data"], second_coord, axis=1)
 
-    div_v = first_gradient + second_gradient
+    # phi if cylindrical, z if 3d cartesian
+    if np.shape(data["velz"]["data"])[-1] > 1:
+        third_gradient = np.gradient(data["velz"]["data"], third_coord, axis=2)
+    else:
+        third_gradient = np.zeros_like(first_gradient)
+
+    div_v = first_gradient + second_gradient + third_gradient
 
     data["div_v"] = {"data": div_v}
     return data
@@ -471,21 +478,20 @@ def vorticity_mag(data, data_yt, **kwargs):
 
 
 @register_compute_func(
-    name="helicity_integrand",
+    name="helicity_density",
     label=r"$u \cdot \omega$",
     units="s$^{-2}$",
     data_deps=["velx", "vely", "velz", "vorticity_x", "vorticity_y", "vorticity_z"],
     cmap="plasma",
-    # data_plot_lims=[0, 3500],
     plot_log10=False,
 )
-def helicity_integrand(data, data_yt, **kwargs):
+def helicity_density(data, data_yt, **kwargs):
     u_dot_w = (
         data["velx"]["data"] * data["vorticity_x"]["data"] + 
         data["vely"]["data"] * data["vorticity_y"]["data"] + 
         data["velz"]["data"] * data["vorticity_z"]["data"]
     )
-    data["helicity_integrand"] = {"data": u_dot_w}
+    data["helicity_density"] = {"data": u_dot_w}
     return data
 
 
@@ -493,13 +499,12 @@ def helicity_integrand(data, data_yt, **kwargs):
     name="helicity",
     label=r"$H$",
     units="cm$^3$/s",
-    data_deps=["helicity_integrand", "first_coord", "second_coord", "third_coord"],
+    data_deps=["helicity_density", "first_coord", "second_coord", "third_coord"],
     cmap="plasma",
-    # data_plot_lims=[0, 3500],
     plot_log10=False,
 )
 def helicity(data, data_yt, **kwargs):
-    u_dot_w = data["helicity_integrand"]["data"]
+    u_dot_w = data["helicity_density"]["data"]
     
     dx = data["first_coord"]["data"][1] - data["first_coord"]["data"][0]
     dy = data["second_coord"]["data"][1] - data["second_coord"]["data"][0]
@@ -508,6 +513,22 @@ def helicity(data, data_yt, **kwargs):
     integral_y = np.trapezoid(integral_x, dx=dy, axis=0)
     total_helicity = np.trapezoid(integral_y, dx=dz, axis=0)
     data["helicity"] = {"data": total_helicity}
+    return data
+
+
+@register_compute_func(
+    name="helicity_density_normalized",
+    label=r"$v \cdot \omega / (|v| |\omega|)$",
+    units="~",
+    data_deps=["helicity_density", "vorticity_mag", "vel_mag"],
+    cmap="plasma",
+    plot_log10=False,
+)
+def helicity_density_normalized(data, data_yt, **kwargs):
+    # max possible helicity density
+    aligned = data["vel_mag"]["data"] * data["vorticity_mag"]["data"]
+
+    data["helicity_density_normalized"] = {"data": data["helicity_density"]["data"] / aligned}
     return data
 
 
