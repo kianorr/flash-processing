@@ -348,7 +348,7 @@ def div_v(data, data_yt, **kwargs):
     second_gradient = np.gradient(data["vely"]["data"], second_coord, axis=1)
 
     # phi if cylindrical, z if 3d cartesian
-    if np.shape(data["velz"]["data"])[-1] > 1:
+    if data["velz"]["data"].squeeze().ndim == 3:
         third_gradient = np.gradient(data["velz"]["data"], third_coord, axis=2)
     else:
         third_gradient = np.zeros_like(first_gradient)
