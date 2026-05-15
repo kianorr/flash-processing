@@ -337,7 +337,7 @@ def div_v(data, data_yt, **kwargs):
     first_coord = data["first_coord"]["data"]
     second_coord = data["second_coord"]["data"]
     third_coord = data["third_coord"]["data"]
-    geometric_factor = first_coord[..., None] if basis == "rzp" else 1
+    geometric_factor = first_coord[..., None, None] if basis == "rzp" else 1
 
     first_gradient = (
         np.gradient(

@@ -22,9 +22,10 @@ def second_coord_FLASH(data, data_yt, **kwargs):
 @register_compute_func(
     name="third_coord_FLASH", label="$z$ or None", units="cm", data_deps=[]
 )
-def second_coord_FLASH(data, data_yt, **kwargs):
+def third_coord_FLASH(data, data_yt, **kwargs):
     basis = kwargs.pop("basis", "rzp")
-    data["third_coord_FLASH"] = {"data": data_yt[basis[2]].value}
+    b = "theta" if basis[2] == "p" else basis[2]
+    data["third_coord_FLASH"] = {"data": data_yt[b].value}
     return data
 
 @register_compute_func(name="r_FLASH", label="$r$", units="cm", data_deps=[])
