@@ -22,6 +22,7 @@ def plot_1d(
     x_range=None,
     y_range=None,
     z_offset=0,
+    reverse_axis=False,
     title=False,
     label="",
     conversion=None,
@@ -81,7 +82,7 @@ def plot_1d(
 
     # reverse array in z (y in xyz) because target is at the top in FLASH
     axis_to_reverse = basis[1]
-    if axis_to_reverse in axis_ind_map:
+    if axis_to_reverse in axis_ind_map and reverse_axis:
         z_spacing = np.diff(data[axis_to_reverse]["data"])
         if not np.allclose(z_spacing, z_spacing[0], atol=1e-10):
             raise NotImplementedError("z is not uniformly spaced.")

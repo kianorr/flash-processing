@@ -422,7 +422,11 @@ def vorticity_x(data, data_yt, **kwargs):
     vy = data["vely"]["data"]
     second_coord = data["second_coord"]["data"]
     third_coord = data["third_coord"]["data"]
-    data["vorticity_x"] = {"data": np.gradient(vz, second_coord, axis=1) - np.gradient(vy, third_coord, axis=2)}
+    if data["velz"]["data"].squeeze().ndim == 3:
+        dvy_d3 = np.gradient(vy, third_coord, axis=2)
+    else:
+        dvy_d3 = np.zeros_like(vy)
+    data["vorticity_x"] = {"data": np.gradient(vz, second_coord, axis=1) - dvy_d3}
     return data
 
 
@@ -440,7 +444,11 @@ def vorticity_y(data, data_yt, **kwargs):
     vx = data["velx"]["data"]
     first_coord = data["first_coord"]["data"]
     third_coord = data["third_coord"]["data"]
-    data["vorticity_y"] = {"data": -(np.gradient(vz, first_coord, axis=0) - np.gradient(vx, third_coord, axis=2))}
+    if data["velz"]["data"].squeeze().ndim == 3:
+        dvx_d3 = np.gradient(vx, third_coord, axis=2)
+    else:
+        dvx_d3 = np.zeros_like(vx)
+    data["vorticity_y"] = {"data": -(np.gradient(vz, first_coord, axis=0) - dvx_d3)}
     return data
 
 
@@ -508,10 +516,13 @@ def helicity(data, data_yt, **kwargs):
     
     dx = data["first_coord"]["data"][1] - data["first_coord"]["data"][0]
     dy = data["second_coord"]["data"][1] - data["second_coord"]["data"][0]
-    dz = data["third_coord"]["data"][1] - data["third_coord"]["data"][0]
     integral_x = np.trapezoid(u_dot_w, dx=dx, axis=0)
     integral_y = np.trapezoid(integral_x, dx=dy, axis=0)
-    total_helicity = np.trapezoid(integral_y, dx=dz, axis=0)
+    if data["helicity_density"]["data"].squeeze().ndim == 3:
+        dz = data["third_coord"]["data"][1] - data["third_coord"]["data"][0]
+        total_helicity = np.trapezoid(integral_y, dx=dz, axis=0)
+    else:
+        total_helicity = integral_y.copy()
     data["helicity"] = {"data": total_helicity}
     return data
 
