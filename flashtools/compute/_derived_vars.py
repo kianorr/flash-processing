@@ -393,6 +393,22 @@ def vel_planar(data, data_yt, **kwargs):
 
 
 @register_compute_func(
+    name="|vel_xy|",
+    label="$\\sqrt{v_x^2 + v_y^2}$",
+    units="cm/s",
+    data_deps=["velx", "vely"],
+    cmap="plasma",
+    # data_plot_lims=[0, 3500],
+    plot_log10=False,
+)
+def vel_mag_xy(data, data_yt, **kwargs):
+    vx = data["velx"]["data"]
+    vy = data["vely"]["data"]
+    data["|vel_xy|"] = {"data": np.sqrt(vx**2 + vy**2)}
+    return data
+
+
+@register_compute_func(
     name="|mag_planar|",
     label="$\\sqrt{B_x^2 + B_z^2}$",
     units="cm/s",
@@ -405,6 +421,22 @@ def mag_planar(data, data_yt, **kwargs):
     bx = data["magx"]["data"]
     bz = data["magz"]["data"]
     data["|mag_planar|"] = {"data": np.sqrt(bx**2 + bz**2)}
+    return data
+
+
+@register_compute_func(
+    name="|mag_xy|",
+    label="$\\sqrt{B_x^2 + B_y^2}$",
+    units="G",
+    data_deps=["magx", "magy"],
+    cmap="plasma",
+    plot_log10=False,
+)
+def mag_mag_xy(data, data_yt, **kwargs):
+    # converting from FLASH units to cgs units
+    bx = data["magx"]["data"] * np.sqrt(4 * np.pi)
+    by = data["magy"]["data"] * np.sqrt(4 * np.pi)
+    data["|mag_xy|"] = {"data": np.sqrt(bx**2 + by**2)}
     return data
 
 
@@ -454,7 +486,7 @@ def vorticity_y(data, data_yt, **kwargs):
 
 @register_compute_func(
     name="vorticity_z",
-    label=r"$v$",
+    label=r"$\omega_z$",
     units="cm$^2$/s",
     data_deps=["vely", "velx", "first_coord", "second_coord"],
     cmap="plasma",
