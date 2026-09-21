@@ -570,7 +570,7 @@ def helicity_density(data, data_yt, **kwargs):
 def helicity(data, data_yt, **kwargs):
     u_dot_w = data["helicity_density"]["data"].copy()
     if kwargs["multiply_by_targ"]:
-        u_dot_w *= data["targ"]
+        u_dot_w *= data["targ"]["data"]
     
     dx = data["first_coord"]["data"][1] - data["first_coord"]["data"][0]
     dy = data["second_coord"]["data"][1] - data["second_coord"]["data"][0]
