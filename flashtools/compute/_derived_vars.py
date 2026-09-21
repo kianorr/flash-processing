@@ -177,14 +177,21 @@ def kinetic_energy(data, data_yt, **kwargs):
     name="B_r",
     label=r"$B_{r}$",
     description="Corrected Br",
-    units="kG",
+    units="G",
     cmap="RdBu",
     data_deps=["magx"],
     divergent=True,
     plot_log10=False,
 )
 def B_r(data, data_yt, **kwargs):
-    data["B_r"] = {"data": data["magx"]["data"] * np.sqrt(4 * np.pi) * 1e-3}
+    if data["magx"]["data"].squeeze().ndim == 3:
+        r = np.sqrt(data["x"]**2 + data["y"]**2)
+        r_safe = np.where(r == 0, 1e-12, r)
+
+        B_r   = (data["B_x"] * data["x"] + data["B_y"] * data["y"]) / r_safe
+    else:
+        B_r   = data["magx"]["data"] * np.sqrt(4 * np.pi)
+    data["B_r"] = {"data": B_r}
     return data
 
 
@@ -425,6 +432,23 @@ def mag_planar(data, data_yt, **kwargs):
 
 
 @register_compute_func(
+    name="|mag|",
+    label="$\\sqrt{B_x^2 + B_y^2 + B_z^2}$",
+    units="G / $\sqrt{4 \pi}$",
+    data_deps=["magx", "magy", "magz"],
+    cmap="plasma",
+    # data_plot_lims=[0, 3500],
+    plot_log10=False,
+)
+def mag_magnitude(data, data_yt, **kwargs):
+    bx = data["magx"]["data"]
+    by = data["magy"]["data"]
+    bz = data["magz"]["data"]
+    data["|mag|"] = {"data": np.sqrt(bx**2 + by**2 + bz**2)}
+    return data
+
+
+@register_compute_func(
     name="|mag_xy|",
     label="$\\sqrt{B_x^2 + B_y^2}$",
     units="G",
@@ -539,12 +563,14 @@ def helicity_density(data, data_yt, **kwargs):
     name="helicity",
     label=r"$H$",
     units="cm$^3$/s",
-    data_deps=["helicity_density", "first_coord", "second_coord", "third_coord"],
+    data_deps=["helicity_density", "first_coord", "second_coord", "third_coord", "targ"],
     cmap="plasma",
     plot_log10=False,
 )
 def helicity(data, data_yt, **kwargs):
-    u_dot_w = data["helicity_density"]["data"]
+    u_dot_w = data["helicity_density"]["data"].copy()
+    if kwargs["multiply_by_targ"]:
+        u_dot_w *= data["targ"]
     
     dx = data["first_coord"]["data"][1] - data["first_coord"]["data"][0]
     dy = data["second_coord"]["data"][1] - data["second_coord"]["data"][0]
