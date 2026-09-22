@@ -17,6 +17,53 @@ from scipy.optimize import curve_fit
 import warnings
 
 
+# class LoadData():
+    
+
+#     def __init__(shot, xrfc_path, image_type=None):
+#         self.path = xrfc_path
+
+#         if image_type is None:
+#             # search through directory for that shot number, prioritize pds over tiff
+#             # image_type = ...
+#             pass
+
+#         if image_type == "tiff":
+#             self.load_tiff()
+#         if image_type == "ccd":
+#             self.load_ccd()
+#         if image_type == "pds":
+#             self.load_pds()
+
+    
+#     def get_image(self):
+#         return self.image
+
+
+#     def load_tiff(
+#         shot,
+#         x_resolution=314572800,
+#         y_resolution=262144,
+#         magnification=1.5,
+#         foreshortening=None,
+#         diagnostic='xrfc3',
+#     ):
+#         dpi = x_resolution / y_resolution
+#         inches_to_mm = 25.4
+#         pixel_size_mm = inches_to_mm / dpi
+#         if magnification:
+#             pixel_size_mm /= magnification
+#         if foreshortening:
+#             pixel_size_mm /= foreshortening
+#         path = "/Users/johan/Documents/research/data_analysis/XRFC"
+#         file = f'XRFC-s{shot}_{diagnostic}_-1.tif'
+#         image = np.array(Image.open(os.path.join(path, file)))
+#         image = transform.rotate(image, angle=90, resize=True)[:, :, 0]
+#         xaxis = np.arange(np.shape(image)[1]) * pixel_size_mm
+#         yaxis = np.arange(np.shape(image)[0]) * pixel_size_mm
+#         self.image_data = (xaxis, yaxis, image)
+
+
 def load_tiff(
     shot,
     x_resolution=314572800,
