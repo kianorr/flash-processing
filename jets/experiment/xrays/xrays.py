@@ -16,26 +16,6 @@ from scipy.interpolate import PchipInterpolator
 from scipy.optimize import curve_fit
 import warnings
 
-def get_closest(arr, val):
-    """
-    Parameters
-    ----------
-    arr: list or np.ndarray
-    val: list, np.ndarray, float
-
-    Returns
-    -------
-    ind: np.ndarray or number
-        if `val` is list, this will be the same shape as `val`
-    """
-    arr = np.asarray(arr)
-    if isinstance(val, list):
-        val = np.array(val)
-    if not isinstance(val, np.ndarray):
-        val = np.array([val])
-    ind = np.argmin(np.abs(arr - val[..., None]), axis=1)
-    return ind.squeeze()
-
 
 def load_tiff(
     shot,
@@ -60,6 +40,7 @@ def load_tiff(
     yaxis = np.arange(np.shape(image)[0]) * pixel_size_mm
 
     return xaxis, yaxis, image
+
 
 def load_pds(
     shot,
