@@ -178,7 +178,7 @@ def dt_biermann(data):
 
 @register_compute_func(
     name="R_length",
-    label="$l_{Re}$",
+    label="$L_{\\text{R}}$",
     units="cm",
     data_deps=[],
     description="Length scale for Rm and Re.",

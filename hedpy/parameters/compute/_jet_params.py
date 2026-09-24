@@ -320,7 +320,30 @@ def Re(data):
     data_deps=[],
 )
 def resistivity(data):
-    data["resistivity"] = 1.14e-7
+    data["resistivity"] = 1.03e-2 * data["Z"] * data["coloumb_log"] * data["T_e"] ** (-3/2)
+    # data["resistivity"] = 1.14e-7
+    return data
+
+
+@register_compute_func(
+    name="tau_adv",
+    label="$\\tau_{\\text{adv}}$",
+    units="ns",
+    data_deps=[],
+)
+def tau_adv(data):
+    data["tau_adv"] = (data["R_length"] / data["v_flow"]) * 1e9
+    return data
+
+
+@register_compute_func(
+    name="tau_res",
+    label="$\\tau_{\\text{res}}$",
+    units="ns",
+    data_deps=[],
+)
+def tau_res(data):
+    data["tau_res"] = (constants.mu_0 * (data["R_length"] * 1e-2) ** 2 / (data["resistivity"] * 1e-2)) * 1e9
     return data
 
 
@@ -332,5 +355,5 @@ def resistivity(data):
 )
 def Rm(data):
     # resistivity is in ohm*m
-    data["Rm"] = constants.mu_0 * data["v_flow"] * 1e-2 * data["R_length"] / data["resistivity"]
+    data["Rm"] = constants.mu_0 * data["v_flow"] * 1e-2 * (data["R_length"] * 1e-2) / (data["resistivity"] * 1e-2)
     return data
