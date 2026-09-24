@@ -1,6 +1,6 @@
 import numpy as np
 from .data_index import register_compute_func
-from flashtools.utils import get_FLASH_basis
+from hedpy.flashtools.utils import get_FLASH_basis
 
 
 @register_compute_func(

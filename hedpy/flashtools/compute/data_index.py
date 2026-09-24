@@ -1,6 +1,6 @@
 """Compute inputted quantities via recursive function. Inspired by DESC."""
 
-from flashtools.utils import load_2d_data, load_time_series, load_ds, get_FLASH_basis
+from hedpy.flashtools.utils import load_2d_data, load_time_series, load_ds, get_FLASH_basis
 
 
 data_index = {}

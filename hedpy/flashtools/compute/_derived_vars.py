@@ -4,7 +4,7 @@ from copy import deepcopy
 
 from scipy import constants
 from .data_index import register_compute_func, data_index
-from flashtools.utils import celsius_to_eV
+from hedpy.flashtools.utils import celsius_to_eV
 
 
 @register_compute_func(
