@@ -51,10 +51,15 @@ def third_coord(data, data_yt, **kwargs):
 
 
 @register_compute_func(
-    name="r", label="$r$", units="cm", data_deps=["r_FLASH"], coordinates="r"
+    name="r", label="$r$", units="cm", data_deps=["r_FLASH", "z_FLASH"], coordinates="r"
 )
 def r(data, data_yt, **kwargs):
-    data["r"] = {"data": np.unique(data["r_FLASH"]["data"].squeeze())}
+    if data["z_FLASH"]["data"].squeeze().ndim == 3:
+        r = np.sqrt(data["x"]["data"]**2 + data["y"]["data"]**2)
+        r_safe = np.where(r == 0, 1e-12, r)
+        data["r"] = {"data": np.unique(r_safe)}
+    else:
+        data["r"] = {"data": np.unique(data["r_FLASH"]["data"].squeeze())}
     return data
 
 

@@ -6,7 +6,7 @@ from scipy.ndimage import rotate
 import warnings
 from flashtools.utils import get_closest, load_time_series, parse_params_file, get_FLASH_basis
 from flashtools.compute import compute, data_index
-
+import copy
 
 def plot_1d(
     name,
@@ -27,6 +27,7 @@ def plot_1d(
     label="",
     conversion=None,
     return_data=False,
+    normalize=False,
     **kwargs,
 ):
     """Plot slice of 2d data or all of 1d data.
@@ -119,7 +120,8 @@ def plot_1d(
     y_mask = (data_1d >= y_range[0]) & (data_1d <= y_range[1])
     x_axis = x_axis[x_mask & y_mask]
     data_1d = data_1d[x_mask & y_mask]
-
+    if normalize:
+        data_1d /= np.max(data_1d)
     yaxis_label = (
         f"log({data_index[name]['label']})" if log else data_index[name]["label"]
     )
@@ -157,6 +159,8 @@ def plot_2d(
     axislabels=False,
     object_text=True,
     reflect_across_vertical=False,
+    xaxis_name=None,
+    yaxis_name=None,
     **kwargs,
 ):
     """Plots 2d data.
@@ -199,8 +203,10 @@ def plot_2d(
     for coord in coordinates:
         if coord not in data:
             data = compute(coord, obj, 0, data=data)
-    xaxis_name = coordinates[0]
-    yaxis_name = coordinates[1]
+    if xaxis_name is None:
+        xaxis_name = coordinates[0]
+    if yaxis_name is None:
+        yaxis_name = coordinates[1]
     y_axis = data[yaxis_name]["data"].copy() + yaxis_offset
     x_axis = data[xaxis_name]["data"].copy()
 

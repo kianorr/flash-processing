@@ -1,3 +1,5 @@
+import pickle
+
 import numpy as np
 import warnings
 import glob
@@ -204,7 +206,7 @@ def get_closest(arr, val):
     return ind.squeeze()
 
 
-def compute_resolution(obj, print_res=False):
+def compute_resolution(obj):
     variables = parse_params_file(obj)
     log_variables = parse_log_file(obj)
     N_x = (
@@ -219,6 +221,40 @@ def compute_resolution(obj, print_res=False):
     )
     N = N_x * N_y
     return N_x, N_y, N
+
+
+def compute_max_blocks(obj=None, max_refinement_level=None, nblock=None):
+    if obj is not None:
+        variables = parse_params_file(obj)
+        log_variables = parse_log_file(obj)
+        
+        variables = parse_params_file(obj)
+        max_refinement_level = variables["lrefine_max"]
+        nblock = [variables["nblockx"], variables["nblocky"], variables.get("nblockz", 1)]
+        ndim = log_variables["Dimensionality"]
+
+    elif max_refinement_level is None or nblock is None:
+        raise ValueError(
+            "Must provide either `obj` or all of `max_refinement_level`, `nblock`."
+            )
+    else:
+        ndim = len(nblock)
+            
+    max_blocks = np.prod(nblock) * np.sum([(2 ** i) ** ndim for i in range(max_refinement_level)])
+    return max_blocks
+
+
+def load_synthetic_xrays(obj, run):
+    obj_path = find_path_to_object(obj)
+    for f in os.listdir(obj_path):
+        if f.startswith(f"synth_emission___run_000{run}"):
+            file = f 
+        else: 
+            continue
+    with open(os.path.join(obj_path, file), "rb") as f:
+        data = pickle.load(f)
+
+    return data
 
 
 def convert_to_eV(temp_C):
