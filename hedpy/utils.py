@@ -1,3 +1,6 @@
+import numpy as np
+
+
 def get_closest(arr, val):
     """
     Parameters
