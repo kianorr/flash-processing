@@ -6,6 +6,7 @@ from scipy.ndimage import rotate
 import warnings
 from hedpy.flashtools.utils import get_closest, load_time_series, parse_params_file, get_FLASH_basis
 from hedpy.flashtools.compute import compute, data_index
+import copy
 
 def plot_1d(
     name,
