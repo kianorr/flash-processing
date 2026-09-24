@@ -4,8 +4,8 @@ from matplotlib.animation import FuncAnimation
 import numpy as np
 from scipy.ndimage import rotate
 import warnings
-from flashtools.utils import get_closest, load_time_series, parse_params_file, get_FLASH_basis
-from flashtools.compute import compute, data_index
+from hedpy.flashtools.utils import get_closest, load_time_series, parse_params_file, get_FLASH_basis
+from hedpy.flashtools.compute import compute, data_index
 
 
 def plot_1d(
