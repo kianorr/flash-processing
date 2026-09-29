@@ -1,5 +1,7 @@
 from scipy import constants
 import numpy as np
+
+from hedpy.flashtools.utils import eV_to_joules
 from .data_index import register_compute_func, data_index
 
 @register_compute_func(
@@ -56,6 +58,7 @@ def ion_charge(data):
 )
 def ele_plasma_frequency(data):
     ne_m = data["n_e"] * 100 ** 3
+    # ne_m = data["n_e"] * 1e-6
     w = (
         np.sqrt(constants.elementary_charge ** 2 * ne_m / (constants.electron_mass * constants.epsilon_0))
     )
@@ -67,13 +70,15 @@ def ele_plasma_frequency(data):
     name="ion_plasma_frequency",
     label="$\omega_{p,i}$",
     units="$1/$s",
-    data_deps=["n_i", "A", "q_i"],
+    data_deps=["n_i", "A", "q_i", "m_i"],
 )
 def ion_plasma_frequency(data):
     ni_m = data["n_i"] * 100 ** 3
-    w = (
-        data["q_i"] * np.sqrt(ni_m / (data["A"] * constants.proton_mass * constants.epsilon_0))
-    )
+    # ni_m = data["n_i"] * 1e-6
+    # w = (
+    #     data["q_i"] * np.sqrt(ni_m / (data["A"] * constants.proton_mass * constants.epsilon_0))
+    # ) 
+    w = np.sqrt(ni_m * data["q_i"] ** 2 / (data["m_i"] * constants.epsilon_0))
     data["ion_plasma_frequency"] = w
     return data
 
@@ -292,13 +297,50 @@ def beta(data):
 
 
 @register_compute_func(
-    name="kinematic_visc",
-    label="$\\nu$",
+    name="ion_kinematic_visc_0",
+    label="$\\nu_0$",
     units="~",
-    data_deps=[],
+    data_deps=["n_i", "T_i", "A", "ion_collision_freq"],
 )
-def kinematic_visc(data):
-    data["kinematic_visc"] = 2.91e-2
+def ion_kinematic_visc_0(data):
+    tau_i = 1 / data["ion_collision_freq"] # s
+    n_i = data["n_i"] * 1e-6 # 1/m^3
+    T_i = data["T_i"] * constants.electron_volt # J
+    visc = 0.96 * n_i * T_i * tau_i / (n_i * data["m_i"])
+    # visc = 5e-1
+    # previously: visc = 2.91e-2
+    data["ion_kinematic_visc_0"] = visc
+    return data
+
+
+@register_compute_func(
+    name="ion_kinematic_visc_1",
+    label="$\\nu_1$",
+    units="~",
+    data_deps=["n_i", "T_i", "A", "ion_collision_freq", "omega_i"],
+)
+def ion_kinematic_visc_1(data):
+    tau_i = 1 / data["ion_collision_freq"] # s
+    n_i = data["n_i"] * 1e6 # 1/m^3
+    T_i = data["T_i"] * constants.electron_volt # J
+    visc = (3 / 10) * n_i * T_i / (tau_i * data["omega_i"] ** 2)
+    visc /= (n_i * data["m_i"])
+    # visc = 5e-1
+    # previously: visc = 2.91e-2
+    data["ion_kinematic_visc_1"] = visc
+    return data
+
+
+@register_compute_func(
+    name="hall_parameter",
+    label="$\omega_{gi} \tau_i$",
+    units="~",
+    data_deps=["ion_collision_freq", "omega_i"],
+)
+def hall_parameter(data):
+    tau_i = 1 / data["ion_collision_freq"] # s
+    hall = data["omega_i"] * tau_i
+    data["hall_parameter"] = hall
     return data
 
 
@@ -306,10 +348,11 @@ def kinematic_visc(data):
     name="Re",
     label="$Re$",
     units="~",
-    data_deps=["v_flow", "R_length", "kinematic_visc"],
+    data_deps=["v_flow", "R_length", "ion_kinematic_visc_1"],
 )
 def Re(data):
-    data["Re"] = data["v_flow"] * 1e-2 * data["R_length"] / data["kinematic_visc"]
+    # cm cancel
+    data["Re"] = data["v_flow"] * 1e-2 * data["R_length"] * 1e-2 / data["ion_kinematic_visc_1"]
     return data
 
 

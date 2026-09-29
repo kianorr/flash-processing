@@ -279,6 +279,11 @@ def eV_to_kelvin(temp_eV):
     return temp_kelvin
 
 
+def eV_to_joules(eV):
+    joules = eV * 1.602e-19
+    return joules
+
+
 def compare_dicts(*dicts, dict_names=None, exclude=[]):
     if isinstance(exclude, str):
         exclude = [exclude]

@@ -7,9 +7,9 @@ import glob
 from scipy.ndimage import gaussian_filter, median_filter, uniform_filter
 import h5py
 from numpy.lib.stride_tricks import sliding_window_view
-# from flashtools.utils import get_closest
+from hedpy.flashtools.utils import get_closest
 from matplotlib.animation import FuncAnimation
-import pickle
+import pickle           
 import pandas as pd
 from scipy.signal import find_peaks
 from scipy.interpolate import PchipInterpolator
@@ -66,6 +66,7 @@ import warnings
 
 def load_tiff(
     shot,
+    path_to_xrfc,
     x_resolution=314572800,
     y_resolution=262144,
     magnification=1.5,
@@ -79,9 +80,8 @@ def load_tiff(
         pixel_size_mm /= magnification
     if foreshortening:
         pixel_size_mm /= foreshortening
-    path = "/Users/johan/Documents/research/data_analysis/XRFC"
     file = f'XRFC-s{shot}_{diagnostic}_-1.tif'
-    image = np.array(Image.open(os.path.join(path, file)))
+    image = np.array(Image.open(os.path.join(path_to_xrfc, file)))
     image = transform.rotate(image, angle=90, resize=True)[:, :, 0]
     xaxis = np.arange(np.shape(image)[1]) * pixel_size_mm
     yaxis = np.arange(np.shape(image)[0]) * pixel_size_mm
@@ -91,19 +91,21 @@ def load_tiff(
 
 def load_pds(
     shot,
+    path_to_xrfc,
     magnification=1.5,
     foreshortening=None,
 ):
-    path = "/Users/johan/Documents/research/data_analysis/XRFC"
     wfile = f"XRFC3-xrf3t1_{shot}_swedge.h5"
-    with h5py.File(os.path.join(path, wfile), "r") as f:
+    with h5py.File(os.path.join(path_to_xrfc, wfile), "r") as f:
         wedge = np.array(f['pds_image'])
 
-    with h5py.File(os.path.join(path, f"XRFC3-xrf3t1_{shot}.h5"), "r") as f:
+    with h5py.File(os.path.join(path_to_xrfc, f"XRFC3-xrf3t1_{shot}.h5"), "r") as f:
         data = np.array(f['pds_image'])
         dim0 = np.array(f['fakeDim0'])
         dim1 = np.array(f['fakeDim1'])
     full_image = convert_wedge_data(data, np.mean(wedge, axis=0), visualize=False)
+    full_image = transform.rotate(full_image, angle=90, resize=True)
+
     conversion = 1.
     if magnification:
         conversion /= magnification
@@ -112,11 +114,12 @@ def load_pds(
     xaxis = dim0 * conversion * 1e-3
     yaxis = dim1 * conversion * 1e-3
 
-    return xaxis, yaxis, full_image.T
+    return xaxis, yaxis, full_image
 
 
 def load_ccd(
     shot,
+    path_to_xrfc,
     pixel_size_um=9,
     magnification=1.5,
     binning=2,
@@ -131,9 +134,8 @@ def load_ccd(
         pixel_size_um /= foreshortening
 
     pixel_size_mm = pixel_size_um * 1e-3
-    path = "/Users/johan/Documents/research/data_analysis/XRFC"
     file = f"XRFC3CCD-xrfc3_t1_{shot}.h5"
-    with h5py.File(os.path.join(path, file), "r") as f:
+    with h5py.File(os.path.join(path_to_xrfc, file), "r") as f:
         data = np.array(f['Streak_array'])
         dim0 = np.array(f['fakeDim0'])
         dim1 = np.array(f['fakeDim1'])
