@@ -23,7 +23,7 @@ def ion_mass(data):
     data_deps=["n_e", "A"],
 )
 def ion_density(data):
-    data["n_i"] = data["n_e"] / data["A"]
+    data["n_i"] = data["n_e"] / data["Z"]
     return data
 
 
@@ -306,6 +306,7 @@ def ion_kinematic_visc_0(data):
     tau_i = 1 / data["ion_collision_freq"] # s
     n_i = data["n_i"] * 1e-6 # 1/m^3
     T_i = data["T_i"] * constants.electron_volt # J
+    # tau_i = 2.1e7 * (data["A"] ** 0.5) * (data["T_i"] ** 1.5) / (data["n_i"] * data["Z"] ** 4 * data["coloumb_log"])
     visc = 0.96 * n_i * T_i * tau_i / (n_i * data["m_i"])
     # visc = 5e-1
     # previously: visc = 2.91e-2
@@ -348,11 +349,11 @@ def hall_parameter(data):
     name="Re",
     label="$Re$",
     units="~",
-    data_deps=["v_flow", "R_length", "ion_kinematic_visc_1"],
+    data_deps=["v_flow", "R_length", "ion_kinematic_visc_0"],
 )
 def Re(data):
     # cm cancel
-    data["Re"] = data["v_flow"] * 1e-2 * data["R_length"] * 1e-2 / data["ion_kinematic_visc_1"]
+    data["Re"] = data["v_flow"] * 1e-2 * data["R_length"] * 1e-2 / data["ion_kinematic_visc_0"]
     return data
 
 

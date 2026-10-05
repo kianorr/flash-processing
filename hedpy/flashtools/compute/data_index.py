@@ -95,7 +95,10 @@ def compute(
                 **kwargs
             )
 
-        basis = get_FLASH_basis(object_id)
+        if "basis" in kwargs:
+            basis = kwargs.pop("basis")
+        else:
+            basis = get_FLASH_basis(object_id)
         data = data_index[name]["fun"](data, data_yt, basis=basis, **kwargs)
         data[name].update(
             object_id=object_id, time_ns=ds.current_time.value * 1e9

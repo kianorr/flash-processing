@@ -71,6 +71,9 @@ def ion_collision_freq(data):
     data["ion_collision_freq"] = (
         4.8e-8 * data["Z"] ** 4 * data["n_i"] * data["coloumb_log"] / (np.sqrt(mu) * data["T_i"] ** (3/2))
     )
+    # numerator = 4 * np.sqrt(np.pi) * data["n_i"] * data["coloumb_log"] * data["q_i"] ** 4 
+    # denom = 3 * np.sqrt(data["m_i"]) * (constants.electron_volt * data["T_i"]) ** (3/2)
+    # data["ion_collision_freq"] = numerator / denom
     return data
 
 

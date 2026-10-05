@@ -634,6 +634,24 @@ def vorticity_mag(data, data_yt, **kwargs):
 
 
 @register_compute_func(
+    name="ang_mom_z",
+    label=r"$L_z$",
+    units="kg m$^2$/s",
+    data_deps=["vely", "velx", "first_coord", "second_coord"],
+    cmap="plasma",
+    # data_plot_lims=[0, 3500],
+    plot_log10=False,
+)
+def ang_mom_z(data, data_yt, **kwargs):
+    vy = data["vely"]["data"]
+    vx = data["velx"]["data"]
+    first_coord = data["first_coord"]["data"]
+    second_coord = data["second_coord"]["data"]
+    data["ang_mom_z"] = {"data": first_coord * vy - second_coord * vx}
+    return data
+
+
+@register_compute_func(
     name="helicity_density",
     label=r"$u \cdot \omega$",
     units="s$^{-2}$",
@@ -799,13 +817,22 @@ def mach_number(data, data_yt, **kwargs):
 
 
 # TODO: find nice solution to integrating over z instead of r
-def integration_1d_helper(first_coord, second_coord, input_data, basis):
-    geometric_factor = first_coord if basis == "rzp" else np.ones(len(first_coord))
+def integration_1d_helper(first_coord, second_coord, input_data, basis, axis):
+    geometric_factor = first_coord if (basis == "rzp" and axis == 0) else np.ones(len(first_coord))
     # this also works
     # int_1d = np.trapezoid(geometric_factor[..., None] * input_data[:, :, 0], first_coord, axis=0)
-    int_1d = np.zeros(len(second_coord))
-    for i, z_slice in enumerate(second_coord):
-        int_1d[i] = np.trapezoid(geometric_factor * input_data[:, i].squeeze(), first_coord)
+    if axis == 0:
+        int_1d = np.zeros(len(first_coord))
+        for i, r_slice in enumerate(first_coord):
+            int_1d[i] = np.trapezoid(geometric_factor[i] * input_data[i, :].squeeze(), second_coord)
+    elif axis == 1:
+        int_1d = np.zeros(len(second_coord))
+        for i, z_slice in enumerate(second_coord):
+            int_1d[i] = np.trapezoid(geometric_factor * input_data[:, i].squeeze(), first_coord)
+
+    # int_1d = np.zeros(len(second_coord))
+    # for i, z_slice in enumerate(second_coord):
+    #     int_1d[i] = np.trapezoid(geometric_factor * input_data[:, i].squeeze(), first_coord)
     line_element = np.trapezoid(geometric_factor, first_coord)
     int_1d /= line_element
     return int_1d
@@ -890,8 +917,9 @@ def register_integrations(name):
     )
     def int_(data, data_yt, **kwargs):
         basis = kwargs.pop("basis", "rzp")
+        axis = kwargs.pop("axis", 0)
         inputs = [data[name]["data"] for name in ["first_coord", "second_coord", name]]
-        int_ = integration_1d_helper(*inputs, basis)
+        int_ = integration_1d_helper(*inputs, basis, axis)
         data["int_" + name] = {"data": int_}
         return data
     
