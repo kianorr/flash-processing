@@ -634,6 +634,42 @@ def vorticity_mag(data, data_yt, **kwargs):
 
 
 @register_compute_func(
+    name="ang_mom_x",
+    label=r"$L_x$",
+    units="kg m$^2$/s",
+    data_deps=["vely", "velz", "second_coord", "third_coord"],
+    cmap="plasma",
+    # data_plot_lims=[0, 3500],
+    plot_log10=False,
+)
+def ang_mom_x(data, data_yt, **kwargs):
+    vy = data["vely"]["data"]
+    vz = data["velz"]["data"]
+    second_coord = data["second_coord"]["data"]
+    third_coord = data["third_coord"]["data"]
+    data["ang_mom_x"] = {"data": vz * second_coord - vy * third_coord}
+    return data
+
+
+@register_compute_func(
+    name="ang_mom_y",
+    label=r"$L_y$",
+    units="kg m$^2$/s",
+    data_deps=["velx", "velz", "first_coord", "third_coord"],
+    cmap="plasma",
+    # data_plot_lims=[0, 3500],
+    plot_log10=False,
+)
+def ang_mom_y(data, data_yt, **kwargs):
+    vx = data["velx"]["data"]
+    vz = data["velz"]["data"]
+    first_coord = data["first_coord"]["data"]
+    third_coord = data["third_coord"]["data"]
+    data["ang_mom_y"] = {"data": - (first_coord * vz - third_coord * vx)}
+    return data
+
+
+@register_compute_func(
     name="ang_mom_z",
     label=r"$L_z$",
     units="kg m$^2$/s",
@@ -648,6 +684,20 @@ def ang_mom_z(data, data_yt, **kwargs):
     first_coord = data["first_coord"]["data"]
     second_coord = data["second_coord"]["data"]
     data["ang_mom_z"] = {"data": first_coord * vy - second_coord * vx}
+    return data
+
+
+@register_compute_func(
+    name="ang_mom_tot",
+    label=r"$L_{\text{tot}}$",
+    units="kg m$^2$/s",
+    data_deps=["ang_mom_x", "ang_mom_y", "ang_mom_z"],
+    cmap="plasma",
+    # data_plot_lims=[0, 3500],
+    plot_log10=False,
+)
+def ang_mom_tot(data, data_yt, **kwargs):
+    data["ang_mom_tot"] = {"data": np.sqrt(data["ang_mom_x"]["data"] ** 2 + data["ang_mom_y"]["data"] ** 2 + data["ang_mom_z"]["data"] ** 2)}
     return data
 
 
