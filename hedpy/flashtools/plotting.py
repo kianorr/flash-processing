@@ -1,10 +1,9 @@
 import matplotlib.pyplot as plt
-from matplotlib import legend, patches
+from matplotlib import patches
 from matplotlib.animation import FuncAnimation
 import numpy as np
-from scipy.ndimage import rotate
 import warnings
-from hedpy.flashtools.utils import get_closest, load_time_series, parse_params_file, get_FLASH_basis
+from hedpy.flashtools.utils import get_closest, load_laser_profile, load_time_series, parse_params_file, get_FLASH_basis
 from hedpy.flashtools.compute import compute, data_index
 
 
@@ -153,7 +152,7 @@ def plot_2d(
     yaxis_offset=0,
     conversion=None,
     return_data=False,
-    target_loc="bottom",
+    target_loc="top",
     cbar=False,
     title=False,
     axislabels=False,
@@ -161,6 +160,9 @@ def plot_2d(
     reflect_across_vertical=False,
     xaxis_name=None,
     yaxis_name=None,
+    slice_of=None,
+    slice_of_value=None,
+    only_target=False,
     **kwargs,
 ):
     """Plots 2d data.
@@ -180,15 +182,28 @@ def plot_2d(
     kwargs: dict
         Allowed kwargs are log, data_plot_lims. The rest go to imshow.
     """
-    data_2d = data[name]["data"].squeeze()
-    if data_2d.ndim == 1:
-        raise ValueError(f"Need data of 2 dimensions, got {data_2d.ndim}.")
-    elif data_2d.ndim > 2:
-        raise NotImplementedError("Data is more than 2 dimensions.")
-
     obj = data[name]["object_id"]
-    basis = list(get_FLASH_basis(obj))
-    coordinates = [basis[i] for i in data_index[name]["coordinate_indices"]]
+    time = data[name]["time_ns"]
+    data_nd = data[name]["data"].squeeze()
+
+    coordinates = list(get_FLASH_basis(obj))
+    if "p" in coordinates:
+        coordinates[coordinates.index("p")] = "third_coord_FLASH"
+    axis_ind_map = {coord: i for i, coord in enumerate(coordinates)}
+    other = compute([*coordinates, "targ"], obj, time)
+    
+    if data_nd.ndim == 1:
+        raise ValueError(f"Need data of 2 dimensions, got {data_2d.ndim}.")
+    elif data_nd.ndim > 2:
+        slice_of_index = axis_ind_map.pop(slice_of)
+        spatial_slice_ind = get_closest(
+            data[slice_of]["data"], slice_of_value
+        )
+        s = [slice(None), slice(None), slice(None)]
+        s[slice_of_index] = slice(spatial_slice_ind, spatial_slice_ind + 1)
+        data_2d = data_nd[*s].squeeze()
+    else:
+        data_2d = data_nd.copy()
 
     allowed_kwargs = ["data_plot_lims", "log"]
     for kwarg in kwargs:
@@ -218,14 +233,20 @@ def plot_2d(
         data_units = conversion["units"]
     else:
         data_units = data_index[name]["units"]
-    data_2d = np.log10(data_2d) if log else data_2d
-    data_2d = data_2d.T
+    def nanlog10(x):
+        with np.errstate(divide='ignore', invalid='ignore'):
+            return np.log10(x)
+    data_2d = nanlog10(data_2d) if log else data_2d
+    # if z (3rd coord) has been popped or it is 2d cartesian
+    transpose_data = (axis_ind_map[list(axis_ind_map.keys())[-1]] != 2) or (data_nd.squeeze().ndim == 2)
+    if transpose_data:
+        data_2d = data_2d.T
+    if only_target:
+        data_2d *= other["targ"]["data"]
 
-    assert target_loc in ["top", "bottom", "left", "right"]
+    assert target_loc in ["top", "bottom"]
     if target_loc == "bottom":
         data_2d = data_2d[::-1]
-    elif target_loc == "left" or target_loc == "right":
-        raise NotImplementedError("left/right orientation not implented.")
 
     # reflect data across r = 0 axis since data is axisymmetric
     if xaxis_name == "r" or reflect_across_vertical:
@@ -414,6 +435,9 @@ def plot_amr_grid(ds, ax, refinement_filter, widths=None, target_loc="bottom"):
         if target_loc == "bottom":
             y0 = ymax - (y1_orig - ymin)
             y1 = ymax - (y0_orig - ymin)
+        else:
+            y0 = y0_orig
+            y1 = y1_orig
 
         rect = patches.Rectangle(
             (x0, y0),
@@ -435,23 +459,12 @@ def plot_laser_profile(object_id, ax=None, return_data=False, beam_labels=None, 
     elif isinstance(object_id, dict):
         variables = object_id
     n_pulses = variables["ed_numberOfPulses"]
-    n_beams = variables["ed_numberOfBeams"]
-    times = [
-        [variables[v] * 1e9 for v in variables if v.startswith(f"ed_time_{pulse}_")]
-        for pulse in range(1, n_pulses + 1)
-    ]
-    powers = [
-        [variables[v] for v in variables if v.startswith(f"ed_power_{pulse}_")]
-        for pulse in range(1, n_pulses + 1)
-    ]
-    pulse_to_beams_map = {
-        pulse_number: [
-            beam
-            for beam in range(1, n_beams + 1)
-            if variables[f"ed_pulseNumber_{beam}"] == pulse_number
-        ]
-        for pulse_number in range(1, n_pulses + 1)
-    }
+    
+    data = load_laser_profile(object_id)
+    times = data["times"]
+    powers = data["powers"]
+    pulse_to_beams_map = data["pulse_to_beams_map"]
+
     for pulse in range(n_pulses):
         beam_label = pulse_to_beams_map[pulse+1] if not beam_labels else beam_labels[pulse]
         label = kwargs.get("label", f"pulse {pulse+1}: {beam_label}")
