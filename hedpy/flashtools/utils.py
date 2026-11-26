@@ -84,6 +84,34 @@ def parse_params_file(
     return variables
 
 
+def load_laser_profile(object_id):
+    if isinstance(object_id, int) or isinstance(object_id, str):
+        variables = parse_params_file(object_id)
+    elif isinstance(object_id, dict):
+        variables = object_id
+    n_pulses = variables["ed_numberOfPulses"]
+    n_beams = variables["ed_numberOfBeams"]
+
+    times = [
+        [variables[v] * 1e9 for v in variables if v.startswith(f"ed_time_{pulse}_")]
+        for pulse in range(1, n_pulses + 1)
+    ]
+    powers = [
+        [variables[v] for v in variables if v.startswith(f"ed_power_{pulse}_")]
+        for pulse in range(1, n_pulses + 1)
+    ]
+    pulse_to_beams_map = {
+        pulse_number: [
+            beam
+            for beam in range(1, n_beams + 1)
+            if variables[f"ed_pulseNumber_{beam}"] == pulse_number
+        ]
+        for pulse_number in range(1, n_pulses + 1)
+    }
+
+    return {"times": times, "powers": powers, "pulse_to_beams_map": pulse_to_beams_map}
+
+
 def find_directory(parent_directory, xxx, init_str="object_{xxx}___*"):
     pattern = f"{parent_directory}/**/{init_str.format(xxx=xxx)}"
     matches = glob.glob(pattern)
