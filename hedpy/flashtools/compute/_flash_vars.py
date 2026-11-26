@@ -110,6 +110,19 @@ def cros(data, data_yt, **kwargs):
 
 
 @register_compute_func(
+    name="embd",
+    label="embedded material",
+    units="~",
+    cmap="plasma",
+    data_deps=[],
+    plot_log10=False,
+)
+def embd(data, data_yt, **kwargs):
+    data["embd"] = {"data": data_yt["embd"].value}
+    return data
+
+
+@register_compute_func(
     name="shok",
     label="shocks",
     units="~",
